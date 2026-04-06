@@ -4,15 +4,19 @@ import type { NavItem, NavOverlayItem } from '@/shared/types/navbar.types';
 import { useNavbarPill } from '@/shared/composables/useNavbarPill';
 import { useMapLayerStore } from '@/modules/map/useMapLayerStore';
 import { useMapOverlayStore } from '@/modules/map/useMapOverlayStore';
+import { useAuthStore } from '@/modules/auth/useAuthStore';
+import AuthModal from '@/modules/auth/AuthModal.vue';
 
 const props = withDefaults(
   defineProps<{
     items: NavItem[];
     overlays?: NavOverlayItem[];
     initialActiveId?: string;
+    showAuth?: boolean;
   }>(),
   {
     overlays: () => [],
+    showAuth: true,
   },
 );
 
@@ -22,6 +26,15 @@ const navRefs = new Map<string, HTMLElement>();
 const { pillStyle, updatePill } = useNavbarPill();
 const { setLayer } = useMapLayerStore();
 const overlayStore = useMapOverlayStore();
+const authStore = useAuthStore();
+
+const isAuthModalOpen = ref(false);
+const authInitialTab = ref<'sign-in' | 'sign-up'>('sign-in');
+
+function openAuth(tab: 'sign-in' | 'sign-up'): void {
+  authInitialTab.value = tab;
+  isAuthModalOpen.value = true;
+}
 
 function selectItem(id: string): void {
   activeId.value = id;
@@ -74,6 +87,38 @@ onUnmounted(() => {
         <FontAwesomeIcon :icon="overlay.icon" />
         {{ overlay.label }}
       </button>
+
+      <!-- Auth section -->
+      <template v-if="showAuth">
+        <div class="navbar-divider" />
+
+        <!-- Logged out state -->
+        <template v-if="!authStore.isLoggedIn">
+          <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="openAuth('sign-in')">
+            Sign In
+          </button>
+          <button class="navbar-auth-btn navbar-auth-btn--primary" @click="openAuth('sign-up')">
+            Sign Up
+          </button>
+        </template>
+
+        <!-- Logged in state -->
+        <template v-else>
+          <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="() => {}">
+            My Account
+          </button>
+          <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="authStore.signOut()">
+            Log Out
+          </button>
+        </template>
+
+        <AuthModal
+          v-model="isAuthModalOpen"
+          :initial-tab="authInitialTab"
+          @sign-in="() => { authStore.isLoggedIn = true }"
+          @sign-up="() => { authStore.isLoggedIn = true }"
+        />
+      </template>
     </nav>
   </Teleport>
 </template>

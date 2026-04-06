@@ -495,6 +495,217 @@
   transform: scale(0.96);
 }
 
+/* Navbar auth buttons */
+.navbar-auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  white-space: nowrap;
+  user-select: none;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.navbar-auth-btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.navbar-auth-btn--ghost:hover {
+  background: rgba(128, 128, 128, 0.08);
+  color: var(--color-text-primary);
+}
+
+.navbar-auth-btn--ghost:active {
+  transform: scale(0.96);
+}
+
+/* Animated gradient border — CSS Houdini angle property */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-gradient {
+  from { --angle: 0deg; }
+  to   { --angle: 360deg; }
+}
+
+.navbar-auth-btn--primary {
+  position: relative;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  z-index: 0;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+/* Rotating gradient ring */
+.navbar-auth-btn--primary::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: calc(var(--radius-md) + 1.5px);
+  background: conic-gradient(
+    from var(--angle),
+    #A855F7,
+    #3B82F6,
+    #EC4899,
+    #A855F7
+  );
+  opacity: 0.65;
+  z-index: -1;
+  animation: spin-gradient 3s linear infinite;
+}
+
+/* Inner mask — keeps the centre transparent so navbar glass shows through */
+.navbar-auth-btn--primary::after {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  border-radius: calc(var(--radius-md) - 0.5px);
+  background: transparent;
+  z-index: -1;
+}
+
+.navbar-auth-btn--primary:hover {
+  color: var(--color-text-primary);
+}
+
+.navbar-auth-btn--primary:hover::before {
+  opacity: 1;
+}
+
+
+.navbar-auth-btn--primary:active {
+  transform: scale(0.96);
+  opacity: 1;
+}
+
+/* ── Auth Modal ── */
+
+.auth-modal-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: var(--color-glass-input-bg);
+  border-radius: var(--radius-md);
+  padding: 4px;
+}
+
+.auth-modal-tab {
+  flex: 1;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+  z-index: 1;
+}
+
+.auth-modal-tab.is-active {
+  color: var(--color-text-primary);
+}
+
+.auth-modal-tab-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.20),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  animation: toggle-pill-appear 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.auth-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--color-island-border);
+  outline: none;
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-text-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+  margin-bottom: 10px;
+}
+
+.auth-oauth-btn:hover {
+  background: var(--color-btn-secondary-hover);
+}
+
+.auth-oauth-btn:active {
+  transform: scale(0.98);
+}
+
+.auth-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+}
+
+.auth-separator::before,
+.auth-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-island-border);
+}
+
+.auth-tab-fade-enter-active,
+.auth-tab-fade-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.auth-tab-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.auth-tab-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 /* Timeline Island */
 .timeline-island {
   position: fixed;
