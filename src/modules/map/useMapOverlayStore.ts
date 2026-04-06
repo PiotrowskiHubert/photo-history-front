@@ -1,0 +1,32 @@
+import { ref, computed } from 'vue';
+import { defineStore } from 'pinia';
+
+export interface MapOverlay {
+  id: string;
+  label: string;
+  icon: string;
+  active: boolean;
+}
+
+export const useMapOverlayStore = defineStore('mapOverlay', () => {
+  const overlays = ref<MapOverlay[]>([
+    { id: 'overlay-a', label: 'Overlay A', icon: 'layer-group', active: true },
+    { id: 'overlay-b', label: 'Overlay B', icon: 'map-pin', active: true },
+    { id: 'overlay-c', label: 'Overlay C', icon: 'compass', active: true },
+  ]);
+
+  const allOverlays = computed(() => overlays.value);
+  const activeOverlayIds = computed(() =>
+    overlays.value.filter((o) => o.active).map((o) => o.id),
+  );
+
+  function toggleOverlay(id: string): void {
+    const overlay = overlays.value.find((o) => o.id === id);
+    if (overlay) {
+      overlay.active = !overlay.active;
+    }
+  }
+
+  return { overlays, allOverlays, activeOverlayIds, toggleOverlay };
+});
+
