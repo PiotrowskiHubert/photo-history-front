@@ -19,15 +19,18 @@ const axisRef = ref<HTMLElement | null>(null);
 
 const ticks = computed<TimelineTick[]>(() => {
   const result: TimelineTick[] = [];
-  for (let v = props.min; v <= props.max; v++) {
-    const isMajor = v % 10 === 0;
-    const isMinor = v % 5 === 0 && !isMajor;
-    result.push({ value: v, isMajor, isMinor });
+  for (let v = props.min; v <= props.max; v += 0.5) {
+    const isMajor  = Number.isInteger(v) && v % 10 === 0;
+    const isMinor  = Number.isInteger(v) && v % 5 === 0 && !isMajor;
+    const isWhole  = Number.isInteger(v) && !isMajor && !isMinor;
+    const isMicro  = !Number.isInteger(v);   // 0.5 steps between integers
+    result.push({ value: v, isMajor, isMinor, isWhole, isMicro });
   }
   return result;
 });
 
 function showLabelFor(value: number): boolean {
+  if (!Number.isInteger(value)) return false;
   if (value === props.min || value === props.max) return true;
   return value % 10 === 0;
 }
@@ -42,7 +45,7 @@ function percentToValue(percent: number): number {
 }
 
 function snapToTick(value: number): number {
-  return Math.round(value / 10) * 10;
+  return Math.round(value);
 }
 
 function startDragFrom(e: PointerEvent): void {
@@ -132,8 +135,9 @@ function startDragTo(e: PointerEvent): void {
             :key="'tick-' + tick.value"
             class="timeline-tick"
             :class="{
-              'is-major': tick.isMajor,
-              'is-minor': tick.isMinor,
+              'is-major':  tick.isMajor,
+              'is-minor':  tick.isMinor,
+              'is-micro':  tick.isMicro,
               'is-active': tick.value >= selectedFrom && tick.value <= selectedTo
             }"
             :style="{ left: valueToPercent(tick.value) + '%' }"

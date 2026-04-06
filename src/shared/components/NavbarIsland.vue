@@ -66,6 +66,11 @@ onUnmounted(() => {
         :class="{ 'is-active': overlayStore.activeOverlayIds.includes(overlay.id) }"
         @click="overlayStore.toggleOverlay(overlay.id)"
       >
+        <!-- Pill shown only when active — same glass style as navbar-pill -->
+        <span
+          v-if="overlayStore.activeOverlayIds.includes(overlay.id)"
+          class="navbar-toggle-pill"
+        />
         <FontAwesomeIcon :icon="overlay.icon" />
         {{ overlay.label }}
       </button>

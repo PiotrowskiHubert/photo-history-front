@@ -455,18 +455,40 @@
 
 .navbar-toggle.is-active {
   color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow:
-    0 0 12px rgba(255, 255, 255, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.40);
+  background: transparent;
 }
 
 .navbar-toggle.is-active:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: transparent;
   opacity: 1;
+}
+
+.navbar-toggle-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  z-index: 0;
+  pointer-events: none;
+
+  /* Identical glass pill as .navbar-pill */
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+
+  animation: toggle-pill-appear 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes toggle-pill-appear {
+  0%   { opacity: 0; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.navbar-toggle > svg,
+.navbar-toggle > span:not(.navbar-toggle-pill) {
+  position: relative;
+  z-index: 1;
 }
 
 .navbar-toggle:active {
@@ -512,7 +534,7 @@
 .timeline-track-wrapper {
   position: relative;
   width: 100%;
-  height: 90px;
+  height: 100px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -557,20 +579,21 @@
   left: 0;
   right: 0;
   top: 50%;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.2);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.25);
   transform: translateY(-50%);
+  border-radius: 1px;
 }
 
 /* Active range line */
 .timeline-line-active {
   position: absolute;
   top: 50%;
-  height: 3px;
+  height: 4px;
   background: #ffffff;
   transform: translateY(-50%);
   border-radius: 2px;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
   transition: left 80ms linear, width 80ms linear;
 }
 
@@ -584,17 +607,33 @@
 }
 
 .timeline-tick.is-major {
-  width: 2px;
-  height: 16px;
-  margin-top: -8px;
+  width: 3px;
+  height: 28px;
+  margin-top: -14px;
   background: var(--color-text-secondary);
 }
 
 .timeline-tick.is-minor {
-  width: 1px;
-  height: 8px;
-  margin-top: -4px;
+  width: 2px;
+  height: 16px;
+  margin-top: -8px;
   background: var(--color-text-tertiary);
+}
+
+.timeline-tick.is-micro {
+  width: 1px;
+  height: 5px;
+  margin-top: -2.5px;
+  background: var(--color-text-tertiary);
+  opacity: 0.45;
+}
+
+.timeline-tick:not(.is-major):not(.is-minor):not(.is-micro) {
+  width: 1px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--color-text-tertiary);
+  opacity: 0.7;
 }
 
 .timeline-tick.is-active {
