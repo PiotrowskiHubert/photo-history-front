@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, watch, inject } from 'vue';
+import { onUnmounted, watch, inject, type Ref } from 'vue';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -12,8 +12,8 @@ const emit = defineEmits<{
   'cluster-click': [markers: PhotoMarker[]];
 }>();
 
-// Inject the Leaflet map object provided by MapView (getter-based)
-const leafletMap = inject<{ leafletObject: L.Map | null }>('leafletMap');
+// Inject the reactive Leaflet map ref provided by MapView
+const leafletMapRef = inject<Ref<L.Map | null>>('leafletMapRef');
 
 let clusterGroup: L.MarkerClusterGroup | null = null;
 
@@ -109,20 +109,11 @@ function pickNewest(photoMarkers: PhotoMarker[]): PhotoMarker {
   );
 }
 
-function rebuildCluster() {
-  const map = leafletMap?.leafletObject;
-  if (!map) return;
-
-  // Remove existing cluster group
-  if (clusterGroup) {
-    map.removeLayer(clusterGroup);
-  }
-
-  clusterGroup = L.markerClusterGroup({
-    // Disable the default cluster icon — we build our own
+/** Create a fresh MarkerClusterGroup (NOT yet added to map) */
+function createClusterGroup(): L.MarkerClusterGroup {
+  const group = L.markerClusterGroup({
     iconCreateFunction(cluster) {
       const childMarkers = cluster.getAllChildMarkers();
-      // Each marker has a photoData property we attach below
       const photoList: PhotoMarker[] = childMarkers
         .map((m: any) => m.photoData)
         .filter(Boolean);
@@ -133,47 +124,93 @@ function rebuildCluster() {
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
+    animate: true,
+    removeOutsideVisibleBounds: true,
   });
 
-  props.markers.forEach((photoMarker) => {
-    const icon = buildIcon(photoMarker.url, 1);
-    const leafletMarker = L.marker([photoMarker.lat, photoMarker.lng], { icon });
-    // Attach photo data to marker for cluster icon builder
-    (leafletMarker as any).photoData = photoMarker;
-
-    leafletMarker.on('click', () => {
-      emit('marker-click', photoMarker);
-    });
-
-    clusterGroup!.addLayer(leafletMarker);
-  });
-
-  // Handle cluster click — emit all photos in the cluster
-  clusterGroup.on('clusterclick', (e: any) => {
+  group.on('clusterclick', (e: any) => {
     const photoList: PhotoMarker[] = e.layer.getAllChildMarkers()
       .map((m: any) => m.photoData)
       .filter(Boolean);
     emit('cluster-click', photoList);
   });
 
-  map.addLayer(clusterGroup);
+  return group;
 }
 
-// Watch for map becoming available (delayed provide pattern)
+/** Rebuild the cluster group from scratch */
+function rebuildCluster() {
+  const map = leafletMapRef?.value;
+  // Take a snapshot to avoid iterating a reactive array that may be mutated
+  const snapshot = [...props.markers];
+  console.log('[Cluster] rebuildCluster called — map:', !!map, 'markers:', snapshot.length);
+
+  // Guard: if map is not ready yet, do nothing — watchers will retry
+  if (!map) return;
+
+  // No markers — just remove existing cluster from map
+  if (!snapshot.length) {
+    if (clusterGroup) {
+      map.removeLayer(clusterGroup);
+      clusterGroup = null;
+    }
+    return;
+  }
+
+  // Remove old cluster group from map before creating a new one
+  if (clusterGroup) {
+    map.removeLayer(clusterGroup);
+    clusterGroup = null;
+  }
+
+  // Build all Leaflet markers from the snapshot
+  const leafletMarkers: L.Marker[] = snapshot.map((photoMarker) => {
+    const icon = buildIcon(photoMarker.url, 1);
+    const leafletMarker = L.marker([photoMarker.lat, photoMarker.lng], { icon });
+    (leafletMarker as any).photoData = photoMarker;
+    leafletMarker.on('click', () => emit('marker-click', photoMarker));
+    return leafletMarker;
+  });
+
+  // Create cluster group, add markers FIRST, THEN add to map
+  // This ensures bounds are initialized before the map triggers moveend
+  clusterGroup = createClusterGroup();
+  clusterGroup.addLayers(leafletMarkers);
+  map.addLayer(clusterGroup);
+
+  console.log('[Cluster] added', leafletMarkers.length, 'markers to cluster group');
+}
+
+// Microtask debounce to prevent overlapping rebuilds
+let rebuildScheduled = false;
+
+function scheduleRebuild() {
+  if (rebuildScheduled) return;
+  rebuildScheduled = true;
+  Promise.resolve().then(() => {
+    rebuildScheduled = false;
+    rebuildCluster();
+  });
+}
+
+// Watch for map becoming available (map loads async)
 watch(
-  () => leafletMap?.leafletObject,
-  (map) => { if (map) rebuildCluster(); },
-  { immediate: true },
+  () => leafletMapRef?.value,
+  (map) => { if (map) scheduleRebuild(); },
+  { immediate: true }
 );
 
-watch(() => props.markers, () => {
-  rebuildCluster();
-}, { deep: true });
+// Shallow watch on marker IDs — fires exactly once per list change
+watch(
+  () => props.markers.map(m => m.id).join(','),
+  () => scheduleRebuild()
+);
 
 onUnmounted(() => {
-  const map = leafletMap?.leafletObject;
+  const map = leafletMapRef?.value;
   if (map && clusterGroup) {
     map.removeLayer(clusterGroup);
+    clusterGroup = null;
   }
 });
 </script>

@@ -37,6 +37,7 @@ export const usePhotoStore = defineStore('photos', () => {
   /** Fetch all photos from the backend */
   async function fetchPhotos(): Promise<void> {
     const { data } = await api.get('/api/photos');
+    console.log('[PhotoStore] fetchPhotos raw response:', data);
     markers.value = data.map((p: any) => ({
       id: p.id,
       lat: p.latitude,
@@ -47,6 +48,7 @@ export const usePhotoStore = defineStore('photos', () => {
       takenAt: p.takenAt,
       uploadedAt: p.uploadedAt,
     }));
+    console.log('[PhotoStore] markers after mapping:', markers.value.length, markers.value);
   }
 
   return { markers, uploadPhoto, fetchPhotos };

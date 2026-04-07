@@ -26,14 +26,24 @@ const mapReady = ref(false);
 const showAddPhotoModal = ref(false);
 const showPhotoModal = ref(false);
 
-// Reactive ref for the Leaflet map instance — provided to child components
-const leafletMapRef = ref<L.Map | null>(null);
-provide('leafletMap', { get leafletObject() { return leafletMapRef.value; } });
+// Reactive ref for the Leaflet map instance — provided directly as a Ref to child components
+const mapInstanceRef = ref<L.Map | null>(null);
+provide('leafletMapRef', mapInstanceRef);
+
+function onMapReady(mapObject: any) {
+  console.log('[MapView] onMapReady fired, map object:', !!mapObject);
+  mapInstanceRef.value = mapObject;
+}
 
 onMounted(async () => {
   await requestLocation();
   mapReady.value = true;
-  await photoStore.fetchPhotos();
+  try {
+    await photoStore.fetchPhotos();
+    console.log('[MapView] fetchPhotos completed, markers count:', markers.value.length);
+  } catch (err) {
+    console.error('[MapView] fetchPhotos FAILED:', err);
+  }
 });
 
 const menuItems: ContextMenuItem[] = [
@@ -58,7 +68,7 @@ function onMapContextMenu(event: LeafletMouseEvent) {
       :max-zoom="19"
       class="h-full w-full"
       @contextmenu="onMapContextMenu"
-      @ready="(mapObject: any) => { leafletMapRef.value = mapObject }"
+      @ready="onMapReady"
     >
       <l-tile-layer
         :key="activeLayer.id"

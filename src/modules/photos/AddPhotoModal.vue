@@ -82,8 +82,13 @@ async function save() {
   try {
     await photoStore.uploadPhoto({ ...form }, props.lat, props.lng);
     close();
-  } catch {
-    serverError.value = 'Failed to upload photo. Please try again.';
+  } catch (err: any) {
+    const status = err?.response?.status;
+    if (status === 401) {
+      serverError.value = 'Your session has expired. Please sign in again.';
+    } else {
+      serverError.value = 'Failed to upload photo. Please try again.';
+    }
   } finally {
     isLoading.value = false;
   }
