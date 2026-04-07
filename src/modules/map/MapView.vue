@@ -2,6 +2,7 @@
 import { onMounted, provide, ref } from 'vue';
 import { LMap, LTileLayer } from '@vue-leaflet/vue-leaflet';
 import type { LeafletMouseEvent } from 'leaflet';
+import type L from 'leaflet';
 import { storeToRefs } from 'pinia';
 import { useGeolocation } from './useGeolocation';
 import { useContextMenu } from './useContextMenu';
@@ -24,6 +25,10 @@ const zoom = ref(13);
 const mapReady = ref(false);
 const showAddPhotoModal = ref(false);
 const showPhotoModal = ref(false);
+
+// Reactive ref for the Leaflet map instance — provided to child components
+const leafletMapRef = ref<L.Map | null>(null);
+provide('leafletMap', { get leafletObject() { return leafletMapRef.value; } });
 
 onMounted(async () => {
   await requestLocation();
@@ -50,9 +55,10 @@ function onMapContextMenu(event: LeafletMouseEvent) {
       v-model:zoom="zoom"
       :center="coordinates"
       :use-global-leaflet="false"
+      :max-zoom="19"
       class="h-full w-full"
       @contextmenu="onMapContextMenu"
-      @ready="(mapObject: any) => provide('leafletMap', { leafletObject: mapObject })"
+      @ready="(mapObject: any) => { leafletMapRef.value = mapObject }"
     >
       <l-tile-layer
         :key="activeLayer.id"

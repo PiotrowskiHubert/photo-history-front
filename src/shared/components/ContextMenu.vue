@@ -51,7 +51,7 @@ function handleAction(item: ContextMenuItem) {
           :class="{ danger: item.danger }"
           @click="handleAction(item)"
         >
-          <FontAwesomeIcon :icon="item.icon" />
+          <FontAwesomeIcon v-if="item.icon" :icon="item.icon" />
           <span>{{ item.label }}</span>
         </div>
       </template>

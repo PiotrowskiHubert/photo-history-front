@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, inject } from 'vue';
+import { onUnmounted, watch, inject } from 'vue';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -12,8 +12,8 @@ const emit = defineEmits<{
   'cluster-click': [markers: PhotoMarker[]];
 }>();
 
-// Inject the Leaflet map instance provided by <l-map>
-const leafletMap = inject<{ leafletObject: L.Map }>('leafletMap');
+// Inject the Leaflet map object provided by MapView (getter-based)
+const leafletMap = inject<{ leafletObject: L.Map | null }>('leafletMap');
 
 let clusterGroup: L.MarkerClusterGroup | null = null;
 
@@ -28,6 +28,8 @@ function buildIcon(imageUrl: string, count: number): L.DivIcon {
   const glassBorder = isDark
     ? 'rgba(255, 255, 255, 0.13)'
     : 'rgba(28, 28, 30, 0.13)';
+  // Solid border color for the triangle tail
+  const glassBorderSolid = isDark ? '#4a5580' : '#b0b8c8';
   const badgeBg = isDark
     ? 'rgba(0, 0, 0, 0.55)'
     : 'rgba(255, 255, 255, 0.75)';
@@ -36,14 +38,14 @@ function buildIcon(imageUrl: string, count: number): L.DivIcon {
   const badge = count > 1
     ? `<div style="
         position:absolute;
-        bottom:4px;
+        bottom:3px;
         left:50%;
         transform:translateX(-50%);
         background:${badgeBg};
         color:${badgeColor};
-        font-size:11px;
+        font-size:10px;
         font-weight:600;
-        padding:1px 7px;
+        padding:1px 6px;
         border-radius:10px;
         backdrop-filter:blur(8px);
         -webkit-backdrop-filter:blur(8px);
@@ -54,36 +56,50 @@ function buildIcon(imageUrl: string, count: number): L.DivIcon {
     : '';
 
   const html = `
-    <div style="
-      position:relative;
-      width:80px;
-      height:80px;
-      border-radius:12px;
-      overflow:hidden;
-      background:${glassBg};
-      backdrop-filter:blur(16px) saturate(160%);
-      -webkit-backdrop-filter:blur(16px) saturate(160%);
-      border:1.5px solid ${glassBorder};
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.18),
-        0 4px 16px rgba(0,0,0,0.22),
-        0 1px 4px rgba(0,0,0,0.12);
-      cursor:pointer;
-    ">
-      <img src="${imageUrl}"
-        alt="photo"
-        style="width:100%;height:100%;object-fit:cover;display:block;"
-        loading="lazy"
-      />
-      ${badge}
+    <div style="position:relative; width:60px; height:70px; cursor:pointer;">
+      <!-- Photo square with liquid glass frame -->
+      <div style="
+        position:absolute;
+        top:0; left:0;
+        width:60px; height:60px;
+        border-radius:10px;
+        overflow:hidden;
+        background:${glassBg};
+        backdrop-filter:blur(16px) saturate(160%);
+        -webkit-backdrop-filter:blur(16px) saturate(160%);
+        border:1.5px solid ${glassBorder};
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.18),
+          0 4px 16px rgba(0,0,0,0.22),
+          0 1px 4px rgba(0,0,0,0.12);
+      ">
+        <img src="${imageUrl}"
+          alt="photo"
+          style="width:100%;height:100%;object-fit:cover;display:block;"
+          loading="lazy"
+        />
+        ${badge}
+      </div>
+      <!-- Triangle tail pointing down -->
+      <div style="
+        position:absolute;
+        bottom:0;
+        left:50%;
+        transform:translateX(-50%);
+        width:0;
+        height:0;
+        border-left:8px solid transparent;
+        border-right:8px solid transparent;
+        border-top:10px solid ${glassBorderSolid};
+      "></div>
     </div>
   `;
 
   return L.divIcon({
     html,
     className: '',   // remove default leaflet-div-icon class styles
-    iconSize: [80, 80],
-    iconAnchor: [40, 80],
+    iconSize: [60, 70],
+    iconAnchor: [30, 70],
   });
 }
 
@@ -143,9 +159,12 @@ function rebuildCluster() {
   map.addLayer(clusterGroup);
 }
 
-onMounted(() => {
-  rebuildCluster();
-});
+// Watch for map becoming available (delayed provide pattern)
+watch(
+  () => leafletMap?.leafletObject,
+  (map) => { if (map) rebuildCluster(); },
+  { immediate: true },
+);
 
 watch(() => props.markers, () => {
   rebuildCluster();
