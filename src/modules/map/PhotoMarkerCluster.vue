@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, watch, inject, type Ref } from 'vue';
+import { onUnmounted, watchEffect, inject, toRaw, type Ref } from 'vue';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -117,6 +117,9 @@ function createClusterGroup(): L.MarkerClusterGroup {
       const photoList: PhotoMarker[] = childMarkers
         .map((m: any) => m.photoData)
         .filter(Boolean);
+      if (!photoList.length) {
+        return buildIcon('', 1);
+      }
       const newest = pickNewest(photoList);
       return buildIcon(newest.url, photoList.length);
     },
@@ -141,11 +144,14 @@ function createClusterGroup(): L.MarkerClusterGroup {
 /** Rebuild the cluster group from scratch */
 function rebuildCluster() {
   const map = leafletMapRef?.value;
-  // Take a snapshot to avoid iterating a reactive array that may be mutated
-  const snapshot = [...props.markers];
+  // Iterate the reactive array (so watchEffect tracks length/index changes),
+  // then strip each element's Vue Proxy via toRaw + shallow copy.
+  // This is critical: Leaflet's internal code (toLatLng, project, etc.) uses
+  // typeof checks that behave differently on Proxy objects vs plain objects.
+  const snapshot: PhotoMarker[] = props.markers.map(m => ({ ...toRaw(m) }));
   console.log('[Cluster] rebuildCluster called — map:', !!map, 'markers:', snapshot.length);
 
-  // Guard: if map is not ready yet, do nothing — watchers will retry
+  // Guard: if map is not ready yet, do nothing — watchEffect will retry
   if (!map) return;
 
   // No markers — just remove existing cluster from map
@@ -163,10 +169,18 @@ function rebuildCluster() {
     clusterGroup = null;
   }
 
-  // Build all Leaflet markers from the snapshot
-  const leafletMarkers: L.Marker[] = snapshot.map((photoMarker) => {
+  // Filter out markers with invalid coordinates
+  const validMarkers = snapshot.filter(
+    m => Number.isFinite(m.lat) && Number.isFinite(m.lng),
+  );
+
+  if (!validMarkers.length) return;
+
+  // Build all Leaflet markers from plain (non-reactive) data
+  const leafletMarkers: L.Marker[] = validMarkers.map((photoMarker) => {
     const icon = buildIcon(photoMarker.url, 1);
     const leafletMarker = L.marker([photoMarker.lat, photoMarker.lng], { icon });
+    // Store a PLAIN object — never a reactive Proxy — to avoid Vue/Leaflet interference
     (leafletMarker as any).photoData = photoMarker;
     leafletMarker.on('click', () => emit('marker-click', photoMarker));
     return leafletMarker;
@@ -181,30 +195,10 @@ function rebuildCluster() {
   console.log('[Cluster] added', leafletMarkers.length, 'markers to cluster group');
 }
 
-// Microtask debounce to prevent overlapping rebuilds
-let rebuildScheduled = false;
-
-function scheduleRebuild() {
-  if (rebuildScheduled) return;
-  rebuildScheduled = true;
-  Promise.resolve().then(() => {
-    rebuildScheduled = false;
-    rebuildCluster();
-  });
-}
-
-// Watch for map becoming available (map loads async)
-watch(
-  () => leafletMapRef?.value,
-  (map) => { if (map) scheduleRebuild(); },
-  { immediate: true }
-);
-
-// Shallow watch on marker IDs — fires exactly once per list change
-watch(
-  () => props.markers.map(m => m.id).join(','),
-  () => scheduleRebuild()
-);
+// Single effect that reacts to both map availability and marker changes.
+// flush: 'post' ensures it runs after all Vue DOM updates are complete,
+// which prevents race conditions with vue-leaflet's internal rendering.
+watchEffect(() => rebuildCluster(), { flush: 'post' });
 
 onUnmounted(() => {
   const map = leafletMapRef?.value;
