@@ -17,7 +17,7 @@ const leafletMapRef = inject<Ref<L.Map | null>>('leafletMapRef');
 
 let clusterGroup: L.MarkerClusterGroup | null = null;
 
-function buildIcon(imageUrl: string, count: number): L.DivIcon {
+function buildIcon(_imageUrl: string, count: number): L.DivIcon {
   // Determine if dark or light theme from document
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
 
@@ -73,11 +73,18 @@ function buildIcon(imageUrl: string, count: number): L.DivIcon {
           0 4px 16px rgba(0,0,0,0.22),
           0 1px 4px rgba(0,0,0,0.12);
       ">
-        <img src="${imageUrl}"
-          alt="photo"
-          style="width:100%;height:100%;object-fit:cover;display:block;"
-          loading="lazy"
-        />
+        <!-- TODO: restore img after debug -->
+        <div style="
+          width:100%;
+          height:100%;
+          background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:10px;
+          color:rgba(255,255,255,0.8);
+          font-weight:600;
+        ">IMG</div>
         ${badge}
       </div>
       <!-- Triangle tail pointing down -->
