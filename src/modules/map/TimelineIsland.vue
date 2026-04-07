@@ -16,6 +16,7 @@ const store = useMapFilterStore();
 const { selectedFrom, selectedTo } = storeToRefs(store);
 
 const axisRef = ref<HTMLElement | null>(null);
+const isDragging = ref(false);
 
 const ticks = computed<TimelineTick[]>(() => {
   const result: TimelineTick[] = [];
@@ -53,6 +54,7 @@ function startDragFrom(e: PointerEvent): void {
   target.setPointerCapture(e.pointerId);
 
   const onMove = (ev: PointerEvent) => {
+    isDragging.value = true;
     if (!axisRef.value) return;
     const rect = axisRef.value.getBoundingClientRect();
     const percent = ((ev.clientX - rect.left) / rect.width) * 100;
@@ -65,6 +67,7 @@ function startDragFrom(e: PointerEvent): void {
     target.releasePointerCapture(e.pointerId);
     target.removeEventListener('pointermove', onMove);
     target.removeEventListener('pointerup', onUp);
+    setTimeout(() => { isDragging.value = false; }, 0);
   };
 
   target.addEventListener('pointermove', onMove);
@@ -76,6 +79,7 @@ function startDragTo(e: PointerEvent): void {
   target.setPointerCapture(e.pointerId);
 
   const onMove = (ev: PointerEvent) => {
+    isDragging.value = true;
     if (!axisRef.value) return;
     const rect = axisRef.value.getBoundingClientRect();
     const percent = ((ev.clientX - rect.left) / rect.width) * 100;
@@ -88,17 +92,45 @@ function startDragTo(e: PointerEvent): void {
     target.releasePointerCapture(e.pointerId);
     target.removeEventListener('pointermove', onMove);
     target.removeEventListener('pointerup', onUp);
+    setTimeout(() => { isDragging.value = false; }, 0);
   };
 
   target.addEventListener('pointermove', onMove);
   target.addEventListener('pointerup', onUp);
+}
+
+/* Click-to-set: left click → set From, right click → set To */
+function handleAxisClick(e: MouseEvent): void {
+  if (isDragging.value) return;
+  if (!axisRef.value) return;
+  const rect = axisRef.value.getBoundingClientRect();
+  const percent = ((e.clientX - rect.left) / rect.width) * 100;
+  const value = snapToTick(percentToValue(percent));
+
+  if (e.button === 0) {
+    const newFrom = Math.max(props.min, Math.min(value, selectedTo.value - 1));
+    store.setRange(newFrom, selectedTo.value);
+  } else if (e.button === 2) {
+    const newTo = Math.min(props.max, Math.max(value, selectedFrom.value + 1));
+    store.setRange(selectedFrom.value, newTo);
+  }
+}
+
+function handleAxisContextMenu(e: MouseEvent): void {
+  e.preventDefault();
+  handleAxisClick(e);
 }
 </script>
 
 <template>
   <Teleport to="body">
     <div class="timeline-island">
-      <div class="timeline-track-wrapper" ref="axisRef">
+      <div
+        class="timeline-track-wrapper"
+        ref="axisRef"
+        @click="handleAxisClick"
+        @contextmenu="handleAxisContextMenu"
+      >
 
         <!-- Labels row -->
         <div class="timeline-labels">

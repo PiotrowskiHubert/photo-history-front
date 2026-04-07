@@ -115,8 +115,6 @@ onUnmounted(() => {
         <AuthModal
           v-model="isAuthModalOpen"
           :initial-tab="authInitialTab"
-          @sign-in="() => { authStore.isLoggedIn = true }"
-          @sign-up="() => { authStore.isLoggedIn = true }"
         />
       </template>
     </nav>

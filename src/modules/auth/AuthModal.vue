@@ -129,11 +129,11 @@ function submitSignUp(): void {
 
       <!-- ── Sign In ── -->
       <div v-if="activeTab === 'sign-in'" key="sign-in">
-        <button class="auth-oauth-btn" @click="emit('oauth-google')">
+        <button class="auth-oauth-btn" @click="() => {}">
           <FontAwesomeIcon :icon="['fab', 'google']" />
           Continue with Google
         </button>
-        <button class="auth-oauth-btn" @click="emit('oauth-github')">
+        <button class="auth-oauth-btn" @click="() => {}">
           <FontAwesomeIcon :icon="['fab', 'github']" />
           Continue with GitHub
         </button>
@@ -162,18 +162,20 @@ function submitSignUp(): void {
           <span v-if="siErrors.password" class="form-error">{{ siErrors.password }}</span>
         </div>
 
-        <button class="btn btn-primary" style="width: 100%" @click="submitSignIn">
-          Sign In
+        <span v-if="serverError" class="form-error" style="display: block; margin-bottom: 12px">{{ serverError }}</span>
+
+        <button class="btn btn-primary" style="width: 100%" :disabled="isLoading" @click="submitSignIn">
+          {{ isLoading ? 'Signing in…' : 'Sign In' }}
         </button>
       </div>
 
       <!-- ── Sign Up ── -->
       <div v-else key="sign-up">
-        <button class="auth-oauth-btn" @click="emit('oauth-google')">
+        <button class="auth-oauth-btn" @click="() => {}">
           <FontAwesomeIcon :icon="['fab', 'google']" />
           Continue with Google
         </button>
-        <button class="auth-oauth-btn" @click="emit('oauth-github')">
+        <button class="auth-oauth-btn" @click="() => {}">
           <FontAwesomeIcon :icon="['fab', 'github']" />
           Continue with GitHub
         </button>
@@ -224,8 +226,10 @@ function submitSignUp(): void {
           <span v-if="suErrors.confirm" class="form-error">{{ suErrors.confirm }}</span>
         </div>
 
-        <button class="btn btn-primary" style="width: 100%" @click="submitSignUp">
-          Create Account
+        <span v-if="serverError" class="form-error" style="display: block; margin-bottom: 12px">{{ serverError }}</span>
+
+        <button class="btn btn-primary" style="width: 100%" :disabled="isLoading" @click="submitSignUp">
+          {{ isLoading ? 'Creating account…' : 'Create Account' }}
         </button>
       </div>
 
