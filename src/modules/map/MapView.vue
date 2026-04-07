@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet';
+import { onMounted, provide, ref } from 'vue';
+import { LMap, LTileLayer } from '@vue-leaflet/vue-leaflet';
 import type { LeafletMouseEvent } from 'leaflet';
 import { storeToRefs } from 'pinia';
 import { useGeolocation } from './useGeolocation';
 import { useContextMenu } from './useContextMenu';
 import { useMapLayerStore } from './useMapLayerStore';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
+import PhotoMarkerCluster from '@/modules/map/PhotoMarkerCluster.vue';
+import PhotoDetailModal from '@/modules/photos/PhotoDetailModal.vue';
 import ContextMenu from '@/shared/components/ContextMenu.vue';
 import type { ContextMenuItem } from '@/shared/types/context-menu.types';
 import AddPhotoModal from '@/modules/photos/AddPhotoModal.vue';
@@ -21,6 +23,7 @@ const { markers } = storeToRefs(photoStore);
 const zoom = ref(13);
 const mapReady = ref(false);
 const showAddPhotoModal = ref(false);
+const showPhotoModal = ref(false);
 
 onMounted(async () => {
   await requestLocation();
@@ -49,6 +52,7 @@ function onMapContextMenu(event: LeafletMouseEvent) {
       :use-global-leaflet="false"
       class="h-full w-full"
       @contextmenu="onMapContextMenu"
+      @ready="(mapObject: any) => provide('leafletMap', { leafletObject: mapObject })"
     >
       <l-tile-layer
         :key="activeLayer.id"
@@ -57,13 +61,14 @@ function onMapContextMenu(event: LeafletMouseEvent) {
         layer-type="base"
         :name="activeLayer.label"
       />
-      <l-marker
-        v-for="marker in markers"
-        :key="marker.id"
-        :lat-lng="[marker.lat, marker.lng]"
+      <PhotoMarkerCluster
+        :markers="markers"
+        @marker-click="showPhotoModal = true"
+        @cluster-click="showPhotoModal = true"
       />
     </l-map>
     <ContextMenu :items="menuItems" />
+    <PhotoDetailModal v-model="showPhotoModal" />
     <AddPhotoModal
       v-model="showAddPhotoModal"
       :lat="contextMenu.clickLatLng.value?.lat ?? 0"

@@ -18,4 +18,5 @@ export interface PhotoMarker {
   description?: string;
   address?: string;
   takenAt?: string;
+  uploadedAt: string;   // ISO string from backend
 }

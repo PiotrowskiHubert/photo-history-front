@@ -12,8 +12,8 @@ export const usePhotoStore = defineStore('photos', () => {
   async function uploadPhoto(formData: PhotoFormData, lat: number, lng: number): Promise<void> {
     const fd = new FormData();
     if (formData.file) fd.append('file', formData.file);
-    fd.append('latitude', lat.toString());
-    fd.append('longitude', lng.toString());
+    fd.append('latitude', lat.toFixed(6));
+    fd.append('longitude', lng.toFixed(6));
     if (formData.description) fd.append('description', formData.description);
     if (formData.address) fd.append('address', formData.address);
     if (formData.date) fd.append('takenAt', formData.date.toISOString());
@@ -30,6 +30,7 @@ export const usePhotoStore = defineStore('photos', () => {
       description: data.description,
       address: data.address,
       takenAt: data.takenAt,
+      uploadedAt: data.uploadedAt,
     });
   }
 
@@ -44,6 +45,7 @@ export const usePhotoStore = defineStore('photos', () => {
       description: p.description,
       address: p.address,
       takenAt: p.takenAt,
+      uploadedAt: p.uploadedAt,
     }));
   }
 
