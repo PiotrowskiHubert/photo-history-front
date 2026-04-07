@@ -29,10 +29,12 @@ const showPhotoModal = ref(false);
 // Reactive ref for the Leaflet map instance — provided directly as a Ref to child components
 const mapInstanceRef = ref<L.Map | null>(null);
 provide('leafletMapRef', mapInstanceRef);
+console.log('[MapView] provide leafletMapRef called, initial value:', mapInstanceRef.value);
 
 function onMapReady(mapObject: any) {
-  console.log('[MapView] onMapReady fired, map object:', !!mapObject);
+  console.log('[MapView] @ready fired, mapObject is:', !!mapObject, (mapObject as any)?._leaflet_id);
   mapInstanceRef.value = mapObject;
+  console.log('[MapView] mapInstanceRef.value assigned:', !!mapInstanceRef.value);
 }
 
 onMounted(async () => {
@@ -41,6 +43,7 @@ onMounted(async () => {
   try {
     await photoStore.fetchPhotos();
     console.log('[MapView] fetchPhotos completed, markers count:', markers.value.length);
+    console.log('[MapView] marker IDs after fetch:', markers.value.map(m => m.id));
   } catch (err) {
     console.error('[MapView] fetchPhotos FAILED:', err);
   }

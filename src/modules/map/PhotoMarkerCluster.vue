@@ -14,6 +14,7 @@ const emit = defineEmits<{
 
 // Inject the reactive Leaflet map ref provided by MapView
 const leafletMapRef = inject<Ref<L.Map | null>>('leafletMapRef');
+console.log('[Cluster] inject leafletMapRef result:', !!leafletMapRef, 'current value:', leafletMapRef?.value);
 
 let clusterGroup: L.MarkerClusterGroup | null = null;
 
@@ -156,16 +157,21 @@ function rebuildCluster() {
   // This is critical: Leaflet's internal code (toLatLng, project, etc.) uses
   // typeof checks that behave differently on Proxy objects vs plain objects.
   const snapshot: PhotoMarker[] = props.markers.map(m => ({ ...toRaw(m) }));
-  console.log('[Cluster] rebuildCluster called — map:', !!map, 'markers:', snapshot.length);
+  console.log('[Cluster] rebuildCluster START — map:', !!map, '| markers count:', snapshot.length, '| clusterGroup:', !!clusterGroup, '| marker IDs:', snapshot.map(m => m.id));
 
   // Guard: if map is not ready yet, do nothing — watchEffect will retry
-  if (!map) return;
+  if (!map) {
+    console.log('[Cluster] rebuildCluster ABORTED — map not ready');
+    return;
+  }
 
   // No markers — just remove existing cluster from map
   if (!snapshot.length) {
+    console.log('[Cluster] no markers — clearing cluster');
     if (clusterGroup) {
       map.removeLayer(clusterGroup);
       clusterGroup = null;
+      console.log('[Cluster] old clusterGroup removed (empty markers)');
     }
     return;
   }
@@ -174,6 +180,7 @@ function rebuildCluster() {
   if (clusterGroup) {
     map.removeLayer(clusterGroup);
     clusterGroup = null;
+    console.log('[Cluster] old clusterGroup removed');
   }
 
   // Filter out markers with invalid coordinates
@@ -181,7 +188,11 @@ function rebuildCluster() {
     m => Number.isFinite(m.lat) && Number.isFinite(m.lng),
   );
 
-  if (!validMarkers.length) return;
+  console.log('[Cluster] validMarkers after coord filter:', validMarkers.length, '| invalid dropped:', snapshot.length - validMarkers.length);
+  if (!validMarkers.length) {
+    console.log('[Cluster] rebuildCluster ABORTED — no valid markers');
+    return;
+  }
 
   // Build all Leaflet markers from plain (non-reactive) data
   const leafletMarkers: L.Marker[] = validMarkers.map((photoMarker) => {
@@ -193,19 +204,24 @@ function rebuildCluster() {
     return leafletMarker;
   });
 
+  console.log('[Cluster] built', leafletMarkers.length, 'Leaflet markers');
+
   // Create cluster group, add markers FIRST, THEN add to map
   // This ensures bounds are initialized before the map triggers moveend
   clusterGroup = createClusterGroup();
   clusterGroup.addLayers(leafletMarkers);
+  console.log('[Cluster] added', leafletMarkers.length, 'markers to new clusterGroup');
   map.addLayer(clusterGroup);
-
-  console.log('[Cluster] added', leafletMarkers.length, 'markers to cluster group');
+  console.log('[Cluster] clusterGroup added to map ✓');
 }
 
 // Single effect that reacts to both map availability and marker changes.
 // flush: 'post' ensures it runs after all Vue DOM updates are complete,
 // which prevents race conditions with vue-leaflet's internal rendering.
-watchEffect(() => rebuildCluster(), { flush: 'post' });
+watchEffect(() => {
+  console.log('[Cluster] watchEffect triggered — about to rebuildCluster');
+  rebuildCluster();
+}, { flush: 'post' });
 
 onUnmounted(() => {
   const map = leafletMapRef?.value;
