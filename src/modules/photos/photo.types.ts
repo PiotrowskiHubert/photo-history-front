@@ -2,7 +2,7 @@ export interface PhotoFormData {
   address: string;
   description: string;
   date: Date | null;
-  photo: string;
+  file: File | null;         // actual File object, replaces photo: string
 }
 
 export interface PhotoFormErrors {
@@ -10,3 +10,12 @@ export interface PhotoFormErrors {
   photo: string | null;
 }
 
+export interface PhotoMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  url: string;
+  description?: string;
+  address?: string;
+  takenAt?: string;
+}

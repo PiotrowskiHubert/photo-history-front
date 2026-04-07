@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { reactive, watch, toRef } from 'vue';
+import { computed, reactive, ref, watch, toRef } from 'vue';
 import { storeToRefs } from 'pinia';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { useAddressAutocomplete } from './useAddressAutocomplete';
 import { useReverseGeocode } from './useReverseGeocode';
 import { useThemeStore } from '@/modules/theme/useThemeStore';
+import { usePhotoStore } from './usePhotoStore';
 import type { PhotoFormData, PhotoFormErrors } from './photo.types';
 
 const { isDark } = storeToRefs(useThemeStore());
+const photoStore = usePhotoStore();
 
 const props = withDefaults(
   defineProps<{
@@ -24,17 +26,22 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  submit: [data: PhotoFormData];
 }>();
 
 const { query, suggestions, selectSuggestion, selectedAddress, setAddressSilently } = useAddressAutocomplete();
 const { reverseGeocode } = useReverseGeocode();
 
+const isLoading = ref(false);
+const serverError = ref<string | null>(null);
+
+/* Preview URL for selected file */
+const filePreviewUrl = computed(() => form.file ? URL.createObjectURL(form.file) : '');
+
 const form = reactive<PhotoFormData>({
   address: props.initialData?.address ?? '',
   description: props.initialData?.description ?? '',
   date: props.initialData?.date ?? null,
-  photo: props.initialData?.photo ?? '',
+  file: props.initialData?.file ?? null,
 });
 
 const errors = reactive<PhotoFormErrors>({
@@ -59,20 +66,27 @@ function validate(): boolean {
   if (!selectedAddress.value && !query.value.trim()) {
     errors.address = 'Address is required';
   }
-  if (!form.photo.trim()) {
+  if (!form.file) {
     errors.photo = 'Photo is required';
   }
 
   return !errors.address && !errors.photo;
 }
 
-function save() {
+async function save() {
   form.address = selectedAddress.value || query.value;
   if (!validate()) return;
 
-  emit('submit', { ...form });
-  console.log(form);
-  close();
+  isLoading.value = true;
+  serverError.value = null;
+  try {
+    await photoStore.uploadPhoto({ ...form }, props.lat, props.lng);
+    close();
+  } catch {
+    serverError.value = 'Failed to upload photo. Please try again.';
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function cancel() {
@@ -88,12 +102,14 @@ function resetForm() {
   form.address = '';
   form.description = '';
   form.date = null;
-  form.photo = '';
+  form.file = null;
   query.value = '';
   selectedAddress.value = '';
   suggestions.value = [];
   errors.address = null;
   errors.photo = null;
+  serverError.value = null;
+  isLoading.value = false;
 }
 </script>
 
@@ -157,18 +173,30 @@ function resetForm() {
       <label class="form-label" for="photo-input">Photo</label>
       <input
         id="photo-input"
-        v-model="form.photo"
+        type="file"
+        accept="image/*"
         class="form-input"
         :class="{ error: errors.photo }"
-        placeholder="Photo (placeholder)"
+        @change="(e) => { form.file = (e.target as HTMLInputElement).files?.[0] ?? null }"
+      />
+      <img
+        v-if="form.file"
+        :src="filePreviewUrl"
+        style="max-width: 100%; max-height: 200px; margin-top: 8px; border-radius: 6px;"
+        alt="preview"
       />
       <span v-if="errors.photo" class="form-error">{{ errors.photo }}</span>
     </div>
 
     <!-- Footer -->
+    <div v-if="serverError" class="form-error" style="margin-bottom: 8px; text-align: center;">
+      {{ serverError }}
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" @click="cancel">Cancel</button>
-      <button class="btn btn-primary" @click="save">Save</button>
+      <button class="btn btn-primary" :disabled="isLoading" @click="save">
+        {{ isLoading ? 'Uploading...' : 'Save' }}
+      </button>
     </div>
   </BaseModal>
 </template>

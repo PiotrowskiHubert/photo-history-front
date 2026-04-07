@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import axios from 'axios';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import { useAuthStore } from '@/modules/auth/useAuthStore';
 
 type Tab = 'sign-in' | 'sign-up';
 
@@ -14,13 +16,12 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  'oauth-google': [];
-  'oauth-github': [];
-  'sign-in': [payload: { email: string; password: string }];
-  'sign-up': [payload: { username: string; email: string; password: string }];
 }>();
 
+const store = useAuthStore();
 const activeTab = ref<Tab>(props.initialTab);
+const isLoading = ref(false);
+const serverError = ref<string | null>(null);
 
 /* Reset form state whenever the modal opens */
 watch(
@@ -56,6 +57,8 @@ function resetForms(): void {
   suPassword.value = '';
   suConfirm.value = '';
   suErrors.value = {};
+  serverError.value = null;
+  isLoading.value = false;
 }
 
 function close(): void {
@@ -63,7 +66,7 @@ function close(): void {
 }
 
 /* ── Validation & submit ── */
-function submitSignIn(): void {
+async function submitSignIn(): Promise<void> {
   const errors: typeof siErrors.value = {};
   if (!siEmail.value.trim()) errors.email = 'Email is required';
   else if (!EMAIL_RE.test(siEmail.value.trim())) errors.email = 'Invalid email format';
@@ -72,11 +75,23 @@ function submitSignIn(): void {
   siErrors.value = errors;
   if (Object.keys(errors).length) return;
 
-  emit('sign-in', { email: siEmail.value.trim(), password: siPassword.value });
-  close();
+  isLoading.value = true;
+  serverError.value = null;
+  try {
+    await store.signIn({ email: siEmail.value.trim(), password: siPassword.value });
+    close();
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      serverError.value = 'Invalid email or password.';
+    } else {
+      serverError.value = 'Something went wrong. Please try again.';
+    }
+  } finally {
+    isLoading.value = false;
+  }
 }
 
-function submitSignUp(): void {
+async function submitSignUp(): Promise<void> {
   const errors: typeof suErrors.value = {};
   if (!suUsername.value.trim() || suUsername.value.trim().length < 3)
     errors.username = 'Username must be at least 3 characters';
@@ -89,12 +104,24 @@ function submitSignUp(): void {
   suErrors.value = errors;
   if (Object.keys(errors).length) return;
 
-  emit('sign-up', {
-    username: suUsername.value.trim(),
-    email: suEmail.value.trim(),
-    password: suPassword.value,
-  });
-  close();
+  isLoading.value = true;
+  serverError.value = null;
+  try {
+    await store.signUp({
+      username: suUsername.value.trim(),
+      email: suEmail.value.trim(),
+      password: suPassword.value,
+    });
+    close();
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.status === 409) {
+      serverError.value = 'Email already in use.';
+    } else {
+      serverError.value = 'Something went wrong. Please try again.';
+    }
+  } finally {
+    isLoading.value = false;
+  }
 }
 </script>
 

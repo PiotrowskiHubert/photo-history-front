@@ -5,13 +5,14 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
+import { fab } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import App from './App.vue';
 import router from './router';
 import { initLeafletIcons } from './modules/map/map.icons';
 
-library.add(fas);
+library.add(fas, fab);
 initLeafletIcons();
 
 const app = createApp(App);
