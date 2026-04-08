@@ -8,6 +8,7 @@ import { useGeolocation } from './useGeolocation';
 import { useContextMenu } from './useContextMenu';
 import { useMapLayerStore } from './useMapLayerStore';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
+import type { PhotoMarker, BoundingBox } from '@/modules/photos/photo.types';
 import PhotoMarkerCluster from '@/modules/map/PhotoMarkerCluster.vue';
 import PhotoDetailModal from '@/modules/photos/PhotoDetailModal.vue';
 import ContextMenu from '@/shared/components/ContextMenu.vue';
@@ -24,29 +25,51 @@ const { markers } = storeToRefs(photoStore);
 const zoom = ref(13);
 const mapReady = ref(false);
 const showAddPhotoModal = ref(false);
-const showPhotoModal = ref(false);
+const showPhotoModal = ref<string | null>(null);
 
 // Reactive ref for the Leaflet map instance — provided directly as a Ref to child components
 const mapInstanceRef = ref<L.Map | null>(null);
 provide('leafletMapRef', mapInstanceRef);
-console.log('[MapView] provide leafletMapRef called, initial value:', mapInstanceRef.value);
+
+// Debounce timer for map movement
+let fetchTimer: ReturnType<typeof setTimeout> | null = null;
+
+function getBounds(): BoundingBox | null {
+  const map = mapInstanceRef.value;
+  if (!map) return null;
+  const b = map.getBounds();
+  return {
+    minLat: b.getSouth(),
+    maxLat: b.getNorth(),
+    minLng: b.getWest(),
+    maxLng: b.getEast(),
+  };
+}
+
+function scheduleFetch() {
+  if (fetchTimer) clearTimeout(fetchTimer);
+  fetchTimer = setTimeout(async () => {
+    const bounds = getBounds();
+    if (!bounds) return;
+    try {
+      await photoStore.fetchPhotos(bounds);
+    } catch (err) {
+      console.error('[MapView] fetchPhotos failed:', err);
+    }
+  }, 400); // 400ms debounce — avoids requests on every pixel of pan
+}
 
 function onMapReady(mapObject: any) {
-  console.log('[MapView] @ready fired, mapObject is:', !!mapObject, (mapObject as any)?._leaflet_id);
   mapInstanceRef.value = mapObject;
-  console.log('[MapView] mapInstanceRef.value assigned:', !!mapInstanceRef.value);
+  // Fetch markers for the initial viewport immediately
+  scheduleFetch();
+  // Re-fetch whenever the user pans or zooms
+  mapObject.on('moveend', scheduleFetch);
 }
 
 onMounted(async () => {
   await requestLocation();
   mapReady.value = true;
-  try {
-    await photoStore.fetchPhotos();
-    console.log('[MapView] fetchPhotos completed, markers count:', markers.value.length);
-    console.log('[MapView] marker IDs after fetch:', markers.value.map(m => m.id));
-  } catch (err) {
-    console.error('[MapView] fetchPhotos FAILED:', err);
-  }
 });
 
 const menuItems: ContextMenuItem[] = [
@@ -82,12 +105,16 @@ function onMapContextMenu(event: LeafletMouseEvent) {
       />
       <PhotoMarkerCluster
         :markers="markers"
-        @marker-click="showPhotoModal = true"
-        @cluster-click="showPhotoModal = true"
+        @marker-click="(marker: PhotoMarker) => { showPhotoModal = marker.id }"
+        @cluster-click="() => {}"
       />
     </l-map>
     <ContextMenu :items="menuItems" />
-    <PhotoDetailModal v-model="showPhotoModal" />
+    <PhotoDetailModal
+      :model-value="showPhotoModal !== null"
+      :photo-id="showPhotoModal"
+      @update:model-value="(val: boolean) => { if (!val) showPhotoModal = null }"
+    />
     <AddPhotoModal
       v-model="showAddPhotoModal"
       :lat="contextMenu.clickLatLng.value?.lat ?? 0"

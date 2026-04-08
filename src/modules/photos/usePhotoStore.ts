@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import api from '@/shared/services/api';
-import type { PhotoFormData, PhotoMarker } from './photo.types';
+import type { PhotoFormData, PhotoMarker, PhotoDetail, BoundingBox } from './photo.types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
 
@@ -22,35 +22,47 @@ export const usePhotoStore = defineStore('photos', () => {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
+    // Backend returns full PhotoResponse — map to slim PhotoMarker for the map
     markers.value.push({
       id: data.id,
       lat: data.latitude,
       lng: data.longitude,
-      url: API_URL + data.url,
-      description: data.description,
-      address: data.address,
       takenAt: data.takenAt,
-      uploadedAt: data.uploadedAt,
     });
   }
 
-  /** Fetch all photos from the backend */
-  async function fetchPhotos(): Promise<void> {
-    const { data } = await api.get('/api/photos');
-    console.log('[PhotoStore] fetchPhotos raw response:', data);
+  /** Fetch photos — optionally filtered by map bounding box */
+  async function fetchPhotos(bounds?: BoundingBox): Promise<void> {
+    const params = bounds
+      ? {
+          minLat: bounds.minLat.toFixed(6),
+          maxLat: bounds.maxLat.toFixed(6),
+          minLng: bounds.minLng.toFixed(6),
+          maxLng: bounds.maxLng.toFixed(6),
+        }
+      : undefined;
+
+    const { data } = await api.get('/api/photos', { params });
     markers.value = data.map((p: any) => ({
       id: p.id,
       lat: p.latitude,
       lng: p.longitude,
-      url: API_URL + p.url,
-      description: p.description,
-      address: p.address,
       takenAt: p.takenAt,
-      uploadedAt: p.uploadedAt,
     }));
-    console.log('[PhotoStore] markers after mapping:', markers.value.length, markers.value);
   }
 
-  return { markers, uploadPhoto, fetchPhotos };
-});
+  /** Fetch full photo detail by ID for the modal */
+  async function fetchPhotoDetail(id: string): Promise<PhotoDetail> {
+    const { data } = await api.get(`/api/photos/${id}`);
+    return {
+      id: data.id,
+      url: API_URL + data.url,
+      description: data.description,
+      takenAt: data.takenAt,
+      address: data.address,
+      uploaderUsername: data.uploaderUsername,
+    };
+  }
 
+  return { markers, uploadPhoto, fetchPhotos, fetchPhotoDetail };
+});

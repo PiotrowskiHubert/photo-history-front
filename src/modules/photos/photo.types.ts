@@ -2,7 +2,7 @@ export interface PhotoFormData {
   address: string;
   description: string;
   date: Date | null;
-  file: File | null;         // actual File object, replaces photo: string
+  file: File | null;
 }
 
 export interface PhotoFormErrors {
@@ -10,13 +10,28 @@ export interface PhotoFormErrors {
   photo: string | null;
 }
 
+// Lightweight marker data from GET /api/photos — only what the map needs
 export interface PhotoMarker {
   id: string;
   lat: number;
   lng: number;
+  takenAt?: string;
+}
+
+// Full detail data from GET /api/photos/{id}
+export interface PhotoDetail {
+  id: string;
   url: string;
   description?: string;
-  address?: string;
   takenAt?: string;
-  uploadedAt: string;   // ISO string from backend
+  address?: string;
+  uploaderUsername: string;
 }
+
+export interface BoundingBox {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
