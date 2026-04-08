@@ -15,6 +15,7 @@ export interface PhotoMarker {
   id: string;
   lat: number;
   lng: number;
+  thumbnailUrl: string;
   takenAt?: string;
 }
 

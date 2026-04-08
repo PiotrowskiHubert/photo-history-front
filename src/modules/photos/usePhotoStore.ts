@@ -23,10 +23,13 @@ export const usePhotoStore = defineStore('photos', () => {
     });
 
     // Backend returns full PhotoResponse — map to slim PhotoMarker for the map
+    // Derive thumbnail URL from the returned fileName: replace extension with _thumb.jpg
+    const thumbUrl = API_URL + '/uploads/' + data.fileName.replace(/\.[^.]+$/, '_thumb.jpg');
     markers.value.push({
       id: data.id,
       lat: data.latitude,
       lng: data.longitude,
+      thumbnailUrl: thumbUrl,
       takenAt: data.takenAt,
     });
   }
@@ -47,6 +50,7 @@ export const usePhotoStore = defineStore('photos', () => {
       id: p.id,
       lat: p.latitude,
       lng: p.longitude,
+      thumbnailUrl: API_URL + p.thumbnailUrl,
       takenAt: p.takenAt,
     }));
   }
