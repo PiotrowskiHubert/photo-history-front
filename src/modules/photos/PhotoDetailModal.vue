@@ -45,8 +45,8 @@ watch(
       const results = await Promise.all(
         ids.map(id => photoStore.fetchPhotoDetail(id))
       );
-      // Sort by takenAt ascending (oldest first); missing takenAt treated as empty string
-      results.sort((a, b) => (a.takenAt ?? '').localeCompare(b.takenAt ?? ''));
+      // Sort by takenAt descending (newest first); missing takenAt treated as empty string
+      results.sort((a, b) => (b.takenAt ?? '').localeCompare(a.takenAt ?? ''));
       details.value = results;
       currentIndex.value = 0;
     } catch {
