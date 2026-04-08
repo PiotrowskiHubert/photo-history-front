@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { watch, onUnmounted, inject, type Ref } from 'vue';
 import L from 'leaflet';
-import 'leaflet.markercluster';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { PhotoMarker } from '@/modules/photos/photo.types';
+
+const GRID_CELL = 60;       // px — size of each clustering grid cell
+const DEBOUNCE_MS = 150;    // ms — debounce interval for re-renders
 
 const props = defineProps<{ markers: PhotoMarker[] }>();
 const emit = defineEmits<{
@@ -14,8 +14,9 @@ const emit = defineEmits<{
 
 const leafletMapRef = inject<Ref<L.Map | null>>('leafletMapRef');
 
-// Single cluster group that holds all markers
-let clusterGroup: L.MarkerClusterGroup | null = null;
+// All Leaflet markers currently on the map
+const leafletMarkers: L.Marker[] = [];
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Build a circular thumbnail icon with a downward-pointing pin tail */
 function buildIcon(thumbnailUrl: string): L.DivIcon {
@@ -39,47 +40,109 @@ function buildIcon(thumbnailUrl: string): L.DivIcon {
   });
 }
 
-function clearCluster() {
-  const map = leafletMapRef?.value;
-  if (clusterGroup) {
-    if (map) map.removeLayer(clusterGroup);
-    clusterGroup = null;
-  }
+/** Build a cluster icon — same thumbnail style with a red count badge */
+function buildClusterIcon(thumbnailUrl: string, count: number): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    iconSize: [40, 50],
+    iconAnchor: [20, 50],
+    html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+      <div style="
+        width:40px;height:40px;border-radius:50%;
+        background:url('${thumbnailUrl}') center/cover no-repeat;
+        border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);
+      "></div>
+      <div style="
+        position:absolute;top:-4px;right:-4px;
+        width:20px;height:20px;border-radius:50%;
+        background:#e53935;color:#fff;
+        font-size:11px;font-weight:700;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 1px 3px rgba(0,0,0,.4);
+      ">${count}</div>
+      <div style="
+        width:0;height:0;
+        border-left:6px solid transparent;
+        border-right:6px solid transparent;
+        border-top:10px solid #fff;
+      "></div>
+    </div>`,
+  });
 }
 
-function addCluster() {
+function clearMarkers() {
   const map = leafletMapRef?.value;
-  if (!map) return;
+  leafletMarkers.forEach(m => {
+    if (map) map.removeLayer(m);
+  });
+  leafletMarkers.length = 0;
+}
 
-  clusterGroup = L.markerClusterGroup();
+function addMarkers() {
+  const map = leafletMapRef?.value;
+  if (!map || props.markers.length === 0) return;
+
+  // Group markers into pixel-grid cells
+  const cells = new Map<string, PhotoMarker[]>();
 
   props.markers.forEach(photoMarker => {
-    const icon = buildIcon(photoMarker.thumbnailUrl);
-    const m = L.marker([photoMarker.lat, photoMarker.lng], { icon });
-    // Attach photo data so cluster events can collect it
-    (m as any).photoData = photoMarker;
-    m.on('click', () => emit('marker-click', photoMarker));
-    clusterGroup!.addLayer(m);
+    const pt = map.latLngToContainerPoint([photoMarker.lat, photoMarker.lng]);
+    const cellX = Math.floor(pt.x / GRID_CELL);
+    const cellY = Math.floor(pt.y / GRID_CELL);
+    const key = `${cellX}:${cellY}`;
+    let group = cells.get(key);
+    if (!group) {
+      group = [];
+      cells.set(key, group);
+    }
+    group.push(photoMarker);
   });
 
-  clusterGroup.on('clusterclick', (e: any) => {
-    const childMarkers = e.layer.getAllChildMarkers();
-    const photos: PhotoMarker[] = childMarkers.map((m: any) => m.photoData);
-    emit('cluster-click', photos);
+  // Create a Leaflet marker for each cell
+  cells.forEach(group => {
+    if (group.length === 1) {
+      // Single marker
+      const pm = group[0];
+      const icon = buildIcon(pm.thumbnailUrl);
+      const m = L.marker([pm.lat, pm.lng], { icon });
+      m.on('click', () => emit('marker-click', pm));
+      m.addTo(map);
+      leafletMarkers.push(m);
+    } else {
+      // Cluster — place at average position
+      const avgLat = group.reduce((s, p) => s + p.lat, 0) / group.length;
+      const avgLng = group.reduce((s, p) => s + p.lng, 0) / group.length;
+      const icon = buildClusterIcon(group[0].thumbnailUrl, group.length);
+      const m = L.marker([avgLat, avgLng], { icon });
+      m.on('click', () => emit('cluster-click', group));
+      m.addTo(map);
+      leafletMarkers.push(m);
+    }
   });
-
-  map.addLayer(clusterGroup);
 }
 
 function rebuild() {
-  clearCluster();
-  addCluster();
+  clearMarkers();
+  addMarkers();
 }
+
+function scheduledRebuild() {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(rebuild, DEBOUNCE_MS);
+}
+
+// Map-event handlers stored as named functions so they can be removed later
+function onMoveEnd() { scheduledRebuild(); }
+function onZoomEnd() { scheduledRebuild(); }
 
 watch(
   () => leafletMapRef?.value,
   (map) => {
-    if (map) rebuild();
+    if (map) {
+      rebuild();
+      map.on('moveend', onMoveEnd);
+      map.on('zoomend', onZoomEnd);
+    }
   },
   { immediate: true }
 );
@@ -92,7 +155,13 @@ watch(
 );
 
 onUnmounted(() => {
-  clearCluster();
+  if (debounceTimer) clearTimeout(debounceTimer);
+  clearMarkers();
+  const map = leafletMapRef?.value;
+  if (map) {
+    map.off('moveend', onMoveEnd);
+    map.off('zoomend', onZoomEnd);
+  }
 });
 </script>
 
