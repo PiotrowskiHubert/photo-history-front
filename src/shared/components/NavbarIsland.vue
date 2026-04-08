@@ -6,6 +6,7 @@ import { useMapLayerStore } from '@/modules/map/useMapLayerStore';
 import { useMapOverlayStore } from '@/modules/map/useMapOverlayStore';
 import { useAuthStore } from '@/modules/auth/useAuthStore';
 import AuthModal from '@/modules/auth/AuthModal.vue';
+import AccountModal from '@/modules/account/AccountModal.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -30,6 +31,8 @@ const authStore = useAuthStore();
 
 const isAuthModalOpen = ref(false);
 const authInitialTab = ref<'sign-in' | 'sign-up'>('sign-in');
+const showAccountModal = ref(false);
+const showCollectionModal = ref(false);
 
 function openAuth(tab: 'sign-in' | 'sign-up'): void {
   authInitialTab.value = tab;
@@ -104,8 +107,11 @@ onUnmounted(() => {
 
         <!-- Logged in state -->
         <template v-else>
-          <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="() => {}">
+          <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="showAccountModal = true">
             My Account
+          </button>
+          <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="showCollectionModal = true">
+            My Collection
           </button>
           <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="authStore.signOut()">
             Log Out
@@ -116,6 +122,8 @@ onUnmounted(() => {
           v-model="isAuthModalOpen"
           :initial-tab="authInitialTab"
         />
+        <AccountModal v-model="showAccountModal" />
+        <CollectionModal v-model="showCollectionModal" />
       </template>
     </nav>
   </Teleport>
