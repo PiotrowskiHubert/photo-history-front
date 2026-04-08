@@ -876,7 +876,7 @@
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: none;
 
   display: flex;
@@ -884,10 +884,17 @@
   justify-content: center;
   flex-direction: column;
   gap: 3px;
+  transition: border-color var(--transition-fast);
+}
+
+.timeline-handle:hover {
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 .timeline-handle:active {
   cursor: grabbing;
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
 }
 
 /* Three grip lines inside handle */
