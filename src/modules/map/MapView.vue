@@ -25,7 +25,7 @@ const { markers } = storeToRefs(photoStore);
 const zoom = ref(13);
 const mapReady = ref(false);
 const showAddPhotoModal = ref(false);
-const showPhotoModal = ref<string | null>(null);
+const showPhotoModal = ref<string[]>([]);
 
 // Reactive ref for the Leaflet map instance — provided directly as a Ref to child components
 const mapInstanceRef = ref<L.Map | null>(null);
@@ -105,15 +105,15 @@ function onMapContextMenu(event: LeafletMouseEvent) {
       />
       <PhotoMarkerCluster
         :markers="markers"
-        @marker-click="(marker: PhotoMarker) => { showPhotoModal = marker.id }"
-        @cluster-click="() => {}"
+        @marker-click="(marker: PhotoMarker) => { showPhotoModal = [marker.id] }"
+        @cluster-click="(group: PhotoMarker[]) => { showPhotoModal = group.map(m => m.id) }"
       />
     </l-map>
     <ContextMenu :items="menuItems" />
     <PhotoDetailModal
-      :model-value="showPhotoModal !== null"
-      :photo-id="showPhotoModal"
-      @update:model-value="(val: boolean) => { if (!val) showPhotoModal = null }"
+      :model-value="showPhotoModal.length > 0"
+      :photo-ids="showPhotoModal"
+      @update:model-value="(val: boolean) => { if (!val) showPhotoModal = [] }"
     />
     <AddPhotoModal
       v-model="showAddPhotoModal"
