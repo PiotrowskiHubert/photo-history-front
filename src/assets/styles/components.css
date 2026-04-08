@@ -746,6 +746,7 @@
 .timeline-scroll-container {
   overflow-x: auto;
   width: 100%;
+  overscroll-behavior-x: contain;
 }
 
 @keyframes timeline-appear {

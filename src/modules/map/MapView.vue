@@ -76,7 +76,9 @@ onMounted(async () => {
 });
 
 // Re-fetch markers when the user changes the year range on the timeline
-watch([selectedFrom, selectedTo], scheduleFetch);
+watch([selectedFrom, selectedTo], () => {
+  if (filterStore.hasRealBounds) scheduleFetch();
+});
 
 const menuItems: ContextMenuItem[] = [
   { label: 'Add Photo', icon: 'camera', action: () => { showAddPhotoModal.value = true; contextMenu.close(); } },

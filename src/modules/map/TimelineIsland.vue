@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useMapFilterStore } from '@/modules/map/useMapFilterStore';
 import type { TimelineTick } from '@/shared/types/timeline.types';
@@ -11,7 +11,24 @@ const { selectedFrom, selectedTo, rangeMin, rangeMax, isEmpty } = storeToRefs(st
 const isDisabled = computed(() => isEmpty.value);
 
 const axisRef = ref<HTMLElement | null>(null);
+const scrollContainerRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
+
+// Prevent horizontal wheel events from propagating to the page
+function onWheel(e: WheelEvent) {
+  const el = scrollContainerRef.value;
+  if (el && el.scrollWidth > el.clientWidth) {
+    e.preventDefault();
+  }
+}
+
+onMounted(() => {
+  scrollContainerRef.value?.addEventListener('wheel', onWheel, { passive: false });
+});
+
+onUnmounted(() => {
+  scrollContainerRef.value?.removeEventListener('wheel', onWheel);
+});
 
 const ticks = computed<TimelineTick[]>(() => {
   const result: TimelineTick[] = [];
@@ -126,7 +143,7 @@ function handleAxisContextMenu(e: MouseEvent): void {
 <template>
   <Teleport to="body">
     <div class="timeline-island" :class="{ 'is-disabled': isDisabled }">
-      <div class="timeline-scroll-container">
+      <div class="timeline-scroll-container" ref="scrollContainerRef">
         <div
           class="timeline-track-wrapper"
           ref="axisRef"

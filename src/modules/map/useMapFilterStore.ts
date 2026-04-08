@@ -7,6 +7,7 @@ export const useMapFilterStore = defineStore('mapFilter', () => {
   const selectedFrom = ref(0);
   const selectedTo = ref(100);
   const isEmpty = ref(false);
+  const hasRealBounds = ref(false);
 
   const isFiltered = computed(
     () => selectedFrom.value > rangeMin.value || selectedTo.value < rangeMax.value,
@@ -33,6 +34,7 @@ export const useMapFilterStore = defineStore('mapFilter', () => {
     rangeMax.value = max;
     selectedFrom.value = min;
     selectedTo.value = max;
+    hasRealBounds.value = true;
   }
 
   function setEmpty(val: boolean): void {
@@ -41,7 +43,7 @@ export const useMapFilterStore = defineStore('mapFilter', () => {
 
   return {
     rangeMin, rangeMax, selectedFrom, selectedTo,
-    isEmpty, hasPhotos, isFiltered,
+    isEmpty, hasPhotos, hasRealBounds, isFiltered,
     setRange, resetRange, setRangeBounds, setEmpty,
   };
 });

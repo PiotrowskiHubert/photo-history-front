@@ -39,10 +39,13 @@ export const usePhotoStore = defineStore('photos', () => {
   async function fetchPhotos(bounds?: BoundingBox): Promise<void> {
     const filterStore = useMapFilterStore();
 
-    const params: Record<string, string> = {
-      fromYear: filterStore.selectedFrom.toString(),
-      toYear: filterStore.selectedTo.toString(),
-    };
+    const params: Record<string, string> = {};
+
+    // Only send year filter after real bounds have been established
+    if (filterStore.hasRealBounds) {
+      params.fromYear = filterStore.selectedFrom.toString();
+      params.toYear = filterStore.selectedTo.toString();
+    }
 
     if (bounds) {
       params.minLat = bounds.minLat.toFixed(6);
