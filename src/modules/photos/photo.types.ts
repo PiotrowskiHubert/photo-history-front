@@ -36,3 +36,13 @@ export interface BoundingBox {
   maxLng: number;
 }
 
+// User's own photo from GET /api/photos/my
+export interface UserPhoto {
+  id: string;
+  thumbnailUrl: string;
+  description?: string;
+  takenAt?: string;
+  address?: string;
+  uploadedAt: string;
+}
+

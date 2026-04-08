@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import api from '@/shared/services/api';
-import type { PhotoFormData, PhotoMarker, PhotoDetail, BoundingBox } from './photo.types';
+import type { PhotoFormData, PhotoMarker, PhotoDetail, BoundingBox, UserPhoto } from './photo.types';
 import { useMapFilterStore } from '@/modules/map/useMapFilterStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
@@ -96,5 +96,18 @@ export const usePhotoStore = defineStore('photos', () => {
     };
   }
 
-  return { markers, uploadPhoto, fetchPhotos, fetchPhotoDetail };
+  /** Fetch the current user's own photos from GET /api/photos/my */
+  async function fetchMyPhotos(): Promise<UserPhoto[]> {
+    const { data } = await api.get('/api/photos/my');
+    return data.map((p: any) => ({
+      id: p.id,
+      thumbnailUrl: API_URL + p.thumbnailUrl,
+      description: p.description,
+      takenAt: p.takenAt,
+      address: p.address,
+      uploadedAt: p.uploadedAt,
+    }));
+  }
+
+  return { markers, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos };
 });
