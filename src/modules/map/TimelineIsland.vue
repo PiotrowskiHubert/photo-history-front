@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useMapFilterStore } from '@/modules/map/useMapFilterStore';
 import type { TimelineTick } from '@/shared/types/timeline.types';
@@ -52,6 +52,17 @@ const trackWidth = computed(() => {
 });
 
 const scrollOverflow = computed(() => needsScroll.value ? 'auto' : 'hidden');
+
+// Auto-scroll to the rightmost position (newest year) when range is wide
+watch(rangeMax, () => {
+  if (needsScroll.value) {
+    nextTick(() => {
+      if (scrollContainerRef.value) {
+        scrollContainerRef.value.scrollLeft = scrollContainerRef.value.scrollWidth;
+      }
+    });
+  }
+});
 
 function showLabelFor(value: number): boolean {
   if (!Number.isInteger(value)) return false;
