@@ -75,7 +75,10 @@ export const usePhotoStore = defineStore('photos', () => {
         filterStore.setRangeBounds(minYear, maxYear);
       }
       filterStore.setEmpty(false);
-    } else {
+    } else if (!filterStore.hasRealBounds) {
+      // Only mark as truly empty on the initial (unfiltered) load.
+      // When bounds are already established, 0 results just means the
+      // current year-range filter is too narrow — keep the timeline active.
       filterStore.setEmpty(true);
     }
   }

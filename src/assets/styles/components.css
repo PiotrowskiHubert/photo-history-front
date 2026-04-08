@@ -739,7 +739,6 @@
 /* Disabled state — no photos on the map */
 .timeline-island.is-disabled {
   opacity: 0.35;
-  pointer-events: none;
 }
 
 /* Horizontal scroll container for wide year ranges */
