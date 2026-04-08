@@ -63,15 +63,17 @@ export const usePhotoStore = defineStore('photos', () => {
       takenAt: p.takenAt,
     }));
 
-    // Update timeline bounds from actual marker years
+    // Update timeline bounds from actual marker years — only on initial fetch
     const years = markers.value
       .filter(m => m.takenAt)
       .map(m => new Date(m.takenAt!).getFullYear());
 
     if (years.length > 0) {
-      const minYear = Math.min(...years);
-      const maxYear = Math.max(...years);
-      filterStore.setRangeBounds(minYear, maxYear);
+      if (!filterStore.hasRealBounds) {
+        const minYear = Math.min(...years);
+        const maxYear = Math.max(...years);
+        filterStore.setRangeBounds(minYear, maxYear);
+      }
       filterStore.setEmpty(false);
     } else {
       filterStore.setEmpty(true);

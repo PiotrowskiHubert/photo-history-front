@@ -42,16 +42,29 @@ const ticks = computed<TimelineTick[]>(() => {
   return result;
 });
 
-// Inline width for the track so it scrolls when range > 100 years
+// Inline width for the track — only scroll when range exceeds 25 years
+const needsScroll = computed(() => rangeMax.value - rangeMin.value + 1 > 25);
+
 const trackWidth = computed(() => {
+  if (!needsScroll.value) return '100%';
   const yearCount = rangeMax.value - rangeMin.value + 1;
   return `${yearCount * 28}px`;
 });
+
+const scrollOverflow = computed(() => needsScroll.value ? 'auto' : 'hidden');
 
 function showLabelFor(value: number): boolean {
   if (!Number.isInteger(value)) return false;
   if (value === rangeMin.value || value === rangeMax.value) return true;
   return value % 10 === 0;
+}
+
+/** Align edge labels so they don't overflow the container */
+function labelTransform(value: number): string {
+  if (rangeMin.value === rangeMax.value) return 'translateX(-50%)';
+  if (value === rangeMin.value) return 'translateX(0)';
+  if (value === rangeMax.value) return 'translateX(-100%)';
+  return 'translateX(-50%)';
 }
 
 function valueToPercent(value: number): number {
@@ -143,7 +156,7 @@ function handleAxisContextMenu(e: MouseEvent): void {
 <template>
   <Teleport to="body">
     <div class="timeline-island" :class="{ 'is-disabled': isDisabled }">
-      <div class="timeline-scroll-container" ref="scrollContainerRef">
+      <div class="timeline-scroll-container" ref="scrollContainerRef" :style="{ overflowX: scrollOverflow }">
         <div
           class="timeline-track-wrapper"
           ref="axisRef"
@@ -159,7 +172,7 @@ function handleAxisContextMenu(e: MouseEvent): void {
                 v-if="showLabelFor(tick.value)"
                 class="timeline-label"
                 :class="{ 'is-edge': tick.value === rangeMin || tick.value === rangeMax }"
-                :style="{ left: valueToPercent(tick.value) + '%' }"
+                :style="{ left: valueToPercent(tick.value) + '%', transform: labelTransform(tick.value) }"
               >
                 {{ tick.value }}
               </span>
