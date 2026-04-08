@@ -26,7 +26,7 @@ const overlayItems: NavOverlayItem[] = [
 
 <template>
   <NavbarIsland :items="navItems" :overlays="overlayItems" initial-active-id="dark" />
-  <TimelineIsland v-if="isTimelineEnabled" :min="0" :max="100" />
+  <TimelineIsland v-if="isTimelineEnabled" />
   <main class="w-full h-screen overflow-hidden">
     <slot />
   </main>

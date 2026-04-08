@@ -4,23 +4,18 @@ import { storeToRefs } from 'pinia';
 import { useMapFilterStore } from '@/modules/map/useMapFilterStore';
 import type { TimelineTick } from '@/shared/types/timeline.types';
 
-const props = withDefaults(
-  defineProps<{
-    min?: number;
-    max?: number;
-  }>(),
-  { min: 0, max: 100 },
-);
-
 const store = useMapFilterStore();
-const { selectedFrom, selectedTo } = storeToRefs(store);
+const { selectedFrom, selectedTo, rangeMin, rangeMax, isEmpty } = storeToRefs(store);
+
+// Disabled state when no photos are on the map
+const isDisabled = computed(() => isEmpty.value);
 
 const axisRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
 
 const ticks = computed<TimelineTick[]>(() => {
   const result: TimelineTick[] = [];
-  for (let v = props.min; v <= props.max; v += 0.5) {
+  for (let v = rangeMin.value; v <= rangeMax.value; v += 0.5) {
     const isMajor  = Number.isInteger(v) && v % 10 === 0;
     const isMinor  = Number.isInteger(v) && v % 5 === 0 && !isMajor;
     const isWhole  = Number.isInteger(v) && !isMajor && !isMinor;
@@ -30,19 +25,25 @@ const ticks = computed<TimelineTick[]>(() => {
   return result;
 });
 
+// Inline width for the track so it scrolls when range > 100 years
+const trackWidth = computed(() => {
+  const yearCount = rangeMax.value - rangeMin.value + 1;
+  return `${yearCount * 28}px`;
+});
+
 function showLabelFor(value: number): boolean {
   if (!Number.isInteger(value)) return false;
-  if (value === props.min || value === props.max) return true;
+  if (value === rangeMin.value || value === rangeMax.value) return true;
   return value % 10 === 0;
 }
 
 function valueToPercent(value: number): number {
-  return ((value - props.min) / (props.max - props.min)) * 100;
+  return ((value - rangeMin.value) / (rangeMax.value - rangeMin.value)) * 100;
 }
 
 function percentToValue(percent: number): number {
-  const raw = (percent / 100) * (props.max - props.min) + props.min;
-  return Math.round(Math.min(props.max, Math.max(props.min, raw)));
+  const raw = (percent / 100) * (rangeMax.value - rangeMin.value) + rangeMin.value;
+  return Math.round(Math.min(rangeMax.value, Math.max(rangeMin.value, raw)));
 }
 
 function snapToTick(value: number): number {
@@ -59,7 +60,7 @@ function startDragFrom(e: PointerEvent): void {
     const rect = axisRef.value.getBoundingClientRect();
     const percent = ((ev.clientX - rect.left) / rect.width) * 100;
     let newFrom = snapToTick(percentToValue(percent));
-    newFrom = Math.max(props.min, Math.min(newFrom, selectedTo.value - 1));
+    newFrom = Math.max(rangeMin.value, Math.min(newFrom, selectedTo.value - 1));
     store.setRange(newFrom, selectedTo.value);
   };
 
@@ -84,7 +85,7 @@ function startDragTo(e: PointerEvent): void {
     const rect = axisRef.value.getBoundingClientRect();
     const percent = ((ev.clientX - rect.left) / rect.width) * 100;
     let newTo = snapToTick(percentToValue(percent));
-    newTo = Math.min(props.max, Math.max(newTo, selectedFrom.value + 1));
+    newTo = Math.min(rangeMax.value, Math.max(newTo, selectedFrom.value + 1));
     store.setRange(selectedFrom.value, newTo);
   };
 
@@ -108,10 +109,10 @@ function handleAxisClick(e: MouseEvent): void {
   const value = snapToTick(percentToValue(percent));
 
   if (e.button === 0) {
-    const newFrom = Math.max(props.min, Math.min(value, selectedTo.value - 1));
+    const newFrom = Math.max(rangeMin.value, Math.min(value, selectedTo.value - 1));
     store.setRange(newFrom, selectedTo.value);
   } else if (e.button === 2) {
-    const newTo = Math.min(props.max, Math.max(value, selectedFrom.value + 1));
+    const newTo = Math.min(rangeMax.value, Math.max(value, selectedFrom.value + 1));
     store.setRange(selectedFrom.value, newTo);
   }
 }
@@ -124,79 +125,82 @@ function handleAxisContextMenu(e: MouseEvent): void {
 
 <template>
   <Teleport to="body">
-    <div class="timeline-island">
-      <div
-        class="timeline-track-wrapper"
-        ref="axisRef"
-        @click="handleAxisClick"
-        @contextmenu="handleAxisContextMenu"
-      >
+    <div class="timeline-island" :class="{ 'is-disabled': isDisabled }">
+      <div class="timeline-scroll-container">
+        <div
+          class="timeline-track-wrapper"
+          ref="axisRef"
+          :style="{ width: trackWidth }"
+          @click="handleAxisClick"
+          @contextmenu="handleAxisContextMenu"
+        >
 
-        <!-- Labels row -->
-        <div class="timeline-labels">
-          <template v-for="tick in ticks" :key="'label-' + tick.value">
-            <span
-              v-if="showLabelFor(tick.value)"
-              class="timeline-label"
-              :class="{ 'is-edge': tick.value === min || tick.value === max }"
+          <!-- Labels row -->
+          <div class="timeline-labels">
+            <template v-for="tick in ticks" :key="'label-' + tick.value">
+              <span
+                v-if="showLabelFor(tick.value)"
+                class="timeline-label"
+                :class="{ 'is-edge': tick.value === rangeMin || tick.value === rangeMax }"
+                :style="{ left: valueToPercent(tick.value) + '%' }"
+              >
+                {{ tick.value }}
+              </span>
+            </template>
+          </div>
+
+          <!-- Axis -->
+          <div class="timeline-axis">
+
+            <!-- Base line -->
+            <div class="timeline-line" />
+
+            <!-- Active range line -->
+            <div
+              class="timeline-line-active"
+              :style="{
+                left: valueToPercent(selectedFrom) + '%',
+                width: (valueToPercent(selectedTo) - valueToPercent(selectedFrom)) + '%'
+              }"
+            />
+
+            <!-- Ticks -->
+            <div
+              v-for="tick in ticks"
+              :key="'tick-' + tick.value"
+              class="timeline-tick"
+              :class="{
+                'is-major':  tick.isMajor,
+                'is-minor':  tick.isMinor,
+                'is-micro':  tick.isMicro,
+                'is-active': tick.value >= selectedFrom && tick.value <= selectedTo
+              }"
               :style="{ left: valueToPercent(tick.value) + '%' }"
+            />
+
+            <!-- FROM handle -->
+            <div
+              class="timeline-handle"
+              :style="{ left: valueToPercent(selectedFrom) + '%' }"
+              @pointerdown="startDragFrom"
             >
-              {{ tick.value }}
-            </span>
-          </template>
-        </div>
+              <div class="timeline-handle-grip" />
+              <div class="timeline-handle-grip" />
+              <div class="timeline-handle-grip" />
+            </div>
 
-        <!-- Axis -->
-        <div class="timeline-axis">
+            <!-- TO handle -->
+            <div
+              class="timeline-handle"
+              :style="{ left: valueToPercent(selectedTo) + '%' }"
+              @pointerdown="startDragTo"
+            >
+              <div class="timeline-handle-grip" />
+              <div class="timeline-handle-grip" />
+              <div class="timeline-handle-grip" />
+            </div>
 
-          <!-- Base line -->
-          <div class="timeline-line" />
-
-          <!-- Active range line -->
-          <div
-            class="timeline-line-active"
-            :style="{
-              left: valueToPercent(selectedFrom) + '%',
-              width: (valueToPercent(selectedTo) - valueToPercent(selectedFrom)) + '%'
-            }"
-          />
-
-          <!-- Ticks -->
-          <div
-            v-for="tick in ticks"
-            :key="'tick-' + tick.value"
-            class="timeline-tick"
-            :class="{
-              'is-major':  tick.isMajor,
-              'is-minor':  tick.isMinor,
-              'is-micro':  tick.isMicro,
-              'is-active': tick.value >= selectedFrom && tick.value <= selectedTo
-            }"
-            :style="{ left: valueToPercent(tick.value) + '%' }"
-          />
-
-          <!-- FROM handle -->
-          <div
-            class="timeline-handle"
-            :style="{ left: valueToPercent(selectedFrom) + '%' }"
-            @pointerdown="startDragFrom"
-          >
-            <div class="timeline-handle-grip" />
-            <div class="timeline-handle-grip" />
-            <div class="timeline-handle-grip" />
           </div>
-
-          <!-- TO handle -->
-          <div
-            class="timeline-handle"
-            :style="{ left: valueToPercent(selectedTo) + '%' }"
-            @pointerdown="startDragTo"
-          >
-            <div class="timeline-handle-grip" />
-            <div class="timeline-handle-grip" />
-            <div class="timeline-handle-grip" />
-          </div>
-
         </div>
       </div>
     </div>

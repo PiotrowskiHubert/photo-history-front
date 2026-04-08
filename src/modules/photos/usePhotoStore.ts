@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import api from '@/shared/services/api';
 import type { PhotoFormData, PhotoMarker, PhotoDetail, BoundingBox } from './photo.types';
+import { useMapFilterStore } from '@/modules/map/useMapFilterStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
 
@@ -34,16 +35,21 @@ export const usePhotoStore = defineStore('photos', () => {
     });
   }
 
-  /** Fetch photos — optionally filtered by map bounding box */
+  /** Fetch photos — optionally filtered by map bounding box and year range */
   async function fetchPhotos(bounds?: BoundingBox): Promise<void> {
-    const params = bounds
-      ? {
-          minLat: bounds.minLat.toFixed(6),
-          maxLat: bounds.maxLat.toFixed(6),
-          minLng: bounds.minLng.toFixed(6),
-          maxLng: bounds.maxLng.toFixed(6),
-        }
-      : undefined;
+    const filterStore = useMapFilterStore();
+
+    const params: Record<string, string> = {
+      fromYear: filterStore.selectedFrom.toString(),
+      toYear: filterStore.selectedTo.toString(),
+    };
+
+    if (bounds) {
+      params.minLat = bounds.minLat.toFixed(6);
+      params.maxLat = bounds.maxLat.toFixed(6);
+      params.minLng = bounds.minLng.toFixed(6);
+      params.maxLng = bounds.maxLng.toFixed(6);
+    }
 
     const { data } = await api.get('/api/photos', { params });
     markers.value = data.map((p: any) => ({
@@ -53,6 +59,20 @@ export const usePhotoStore = defineStore('photos', () => {
       thumbnailUrl: API_URL + p.thumbnailUrl,
       takenAt: p.takenAt,
     }));
+
+    // Update timeline bounds from actual marker years
+    const years = markers.value
+      .filter(m => m.takenAt)
+      .map(m => new Date(m.takenAt!).getFullYear());
+
+    if (years.length > 0) {
+      const minYear = Math.min(...years);
+      const maxYear = Math.max(...years);
+      filterStore.setRangeBounds(minYear, maxYear);
+      filterStore.setEmpty(false);
+    } else {
+      filterStore.setEmpty(true);
+    }
   }
 
   /** Fetch full photo detail by ID for the modal */

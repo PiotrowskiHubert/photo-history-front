@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, provide, ref } from 'vue';
+import { onMounted, provide, ref, watch } from 'vue';
 import { LMap, LTileLayer } from '@vue-leaflet/vue-leaflet';
 import type { LeafletMouseEvent } from 'leaflet';
 import type L from 'leaflet';
@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia';
 import { useGeolocation } from './useGeolocation';
 import { useContextMenu } from './useContextMenu';
 import { useMapLayerStore } from './useMapLayerStore';
+import { useMapFilterStore } from './useMapFilterStore';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 import type { PhotoMarker, BoundingBox } from '@/modules/photos/photo.types';
 import PhotoMarkerCluster from '@/modules/map/PhotoMarkerCluster.vue';
@@ -19,6 +20,8 @@ const { coordinates, requestLocation } = useGeolocation();
 const contextMenu = useContextMenu();
 const { open } = contextMenu;
 const { activeLayer } = storeToRefs(useMapLayerStore());
+const filterStore = useMapFilterStore();
+const { selectedFrom, selectedTo } = storeToRefs(filterStore);
 const photoStore = usePhotoStore();
 const { markers } = storeToRefs(photoStore);
 
@@ -71,6 +74,9 @@ onMounted(async () => {
   await requestLocation();
   mapReady.value = true;
 });
+
+// Re-fetch markers when the user changes the year range on the timeline
+watch([selectedFrom, selectedTo], scheduleFetch);
 
 const menuItems: ContextMenuItem[] = [
   { label: 'Add Photo', icon: 'camera', action: () => { showAddPhotoModal.value = true; contextMenu.close(); } },
