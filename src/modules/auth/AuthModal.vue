@@ -35,9 +35,9 @@ watch(
 );
 
 /* ── Sign In fields ── */
-const siEmail = ref('');
+const siIdentifier = ref('');
 const siPassword = ref('');
-const siErrors = ref<{ email?: string; password?: string }>({});
+const siErrors = ref<{ identifier?: string; password?: string }>({});
 
 /* ── Sign Up fields ── */
 const suUsername = ref('');
@@ -49,7 +49,7 @@ const suErrors = ref<{ username?: string; email?: string; password?: string; con
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function resetForms(): void {
-  siEmail.value = '';
+  siIdentifier.value = '';
   siPassword.value = '';
   siErrors.value = {};
   suUsername.value = '';
@@ -68,8 +68,7 @@ function close(): void {
 /* ── Validation & submit ── */
 async function submitSignIn(): Promise<void> {
   const errors: typeof siErrors.value = {};
-  if (!siEmail.value.trim()) errors.email = 'Email is required';
-  else if (!EMAIL_RE.test(siEmail.value.trim())) errors.email = 'Invalid email format';
+  if (!siIdentifier.value.trim()) errors.identifier = 'Email or username is required';
   if (!siPassword.value) errors.password = 'Password is required';
 
   siErrors.value = errors;
@@ -78,11 +77,11 @@ async function submitSignIn(): Promise<void> {
   isLoading.value = true;
   serverError.value = null;
   try {
-    await store.signIn({ email: siEmail.value.trim(), password: siPassword.value });
+    await store.signIn({ emailOrUsername: siIdentifier.value.trim(), password: siPassword.value });
     close();
   } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response?.status === 401) {
-      serverError.value = 'Invalid email or password.';
+      serverError.value = 'Invalid email/username or password.';
     } else {
       serverError.value = 'Something went wrong. Please try again.';
     }
@@ -169,13 +168,14 @@ async function submitSignUp(): Promise<void> {
 
         <div class="form-field">
           <input
-            v-model="siEmail"
-            type="email"
+            v-model="siIdentifier"
+            type="text"
             class="form-input"
-            :class="{ error: siErrors.email }"
-            placeholder="Email"
+            :class="{ error: siErrors.identifier }"
+            placeholder="Email or Username"
+            @keydown.enter="submitSignIn"
           />
-          <span v-if="siErrors.email" class="form-error">{{ siErrors.email }}</span>
+          <span v-if="siErrors.identifier" class="form-error">{{ siErrors.identifier }}</span>
         </div>
 
         <div class="form-field">
@@ -185,6 +185,7 @@ async function submitSignUp(): Promise<void> {
             class="form-input"
             :class="{ error: siErrors.password }"
             placeholder="Password"
+            @keydown.enter="submitSignIn"
           />
           <span v-if="siErrors.password" class="form-error">{{ siErrors.password }}</span>
         </div>
