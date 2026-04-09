@@ -141,6 +141,8 @@ export const usePhotoStore = defineStore('photos', () => {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     notifyMutation();
+    // Trigger map refresh so MapView re-fetches and gets the new thumbnail URL
+    triggerMapRefresh();
   }
 
   /** Delete a photo */

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { watch, onUnmounted, inject, type Ref } from 'vue';
 import L from 'leaflet';
+import { storeToRefs } from 'pinia';
 import type { PhotoMarker } from '@/modules/photos/photo.types';
+import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 
 const GRID_CELL = 60;       // px — size of each clustering grid cell
 const DEBOUNCE_MS = 150;    // ms — debounce interval for re-renders
@@ -13,6 +15,9 @@ const emit = defineEmits<{
 }>();
 
 const leafletMapRef = inject<Ref<L.Map | null>>('leafletMapRef');
+
+const photoStore = usePhotoStore();
+const { mapRefreshToken } = storeToRefs(photoStore);
 
 // All Leaflet markers currently on the map
 const leafletMarkers: L.Marker[] = [];
@@ -147,12 +152,19 @@ watch(
   { immediate: true }
 );
 
+// Rebuild icons whenever any marker data changes (deep watch)
 watch(
-  () => props.markers.length,
+  () => props.markers,
   () => {
     rebuild();
-  }
+  },
+  { deep: true }
 );
+
+// Rebuild icons when a modal triggers a map refresh
+watch(mapRefreshToken, () => {
+  scheduledRebuild();
+});
 
 onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer);
