@@ -22,7 +22,12 @@ onUnmounted(() => globalThis.removeEventListener('keydown', onKeydown));
     <Transition name="modal">
       <div v-if="modelValue" class="modal-backdrop" @mousedown.self="close">
         <div class="modal-window">
-          <p class="modal-title">{{ title }}</p>
+          <div class="modal-header">
+            <p class="modal-title">{{ title }}</p>
+            <button class="modal-close-btn" aria-label="Close" @click="close">
+              <FontAwesomeIcon icon="xmark" />
+            </button>
+          </div>
           <slot />
         </div>
       </div>
@@ -49,6 +54,46 @@ onUnmounted(() => globalThis.removeEventListener('keydown', onKeydown));
 .modal-leave-from {
   opacity: 1;
   transform: scale(1);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+/* Override modal-title margin since it's now inside the header */
+.modal-header .modal-title {
+  margin-bottom: 0;
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.modal-close-btn:hover {
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--color-text-primary);
+}
+
+.modal-close-btn:active {
+  background: rgba(128, 128, 128, 0.22);
+  transform: scale(0.94);
 }
 </style>
 
