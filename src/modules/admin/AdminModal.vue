@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import PhotoDetailModal from '@/modules/photos/PhotoDetailModal.vue';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 import { useAdminStore } from '@/modules/admin/useAdminStore';
-import type { AdminUser } from '@/modules/admin/admin.types';
+import type { AdminUser, AdminPhoto } from '@/modules/admin/admin.types';
 
 const props = defineProps<{ modelValue: boolean }>();
 defineEmits<{ 'update:modelValue': [value: boolean] }>();
@@ -16,6 +17,12 @@ const users = ref<AdminUser[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
+// Review tab state
+const reviewPhotos = ref<AdminPhoto[]>([]);
+const reviewLoading = ref(false);
+const reviewError = ref<string | null>(null);
+const selectedReviewPhotoId = ref<string | null>(null);
+
 async function loadUsers(): Promise<void> {
   loading.value = true;
   error.value = null;
@@ -25,6 +32,18 @@ async function loadUsers(): Promise<void> {
     error.value = 'Failed to load users.';
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadReviewPhotos(): Promise<void> {
+  reviewLoading.value = true;
+  reviewError.value = null;
+  try {
+    reviewPhotos.value = await adminStore.fetchPhotos();
+  } catch {
+    reviewError.value = 'Failed to load photos.';
+  } finally {
+    reviewLoading.value = false;
   }
 }
 
@@ -47,12 +66,19 @@ watch(() => props.modelValue, (open) => {
   if (activeTab.value === 'users') {
     loadUsers();
   }
+  // Fetch review photos on open if on review tab
+  if (activeTab.value === 'review') {
+    loadReviewPhotos();
+  }
 });
 
-// Fetch users when switching to the users tab (if not already loaded)
+// Fetch data when switching tabs (if not already loaded)
 watch(activeTab, (tab) => {
   if (tab === 'users' && users.value.length === 0) {
     loadUsers();
+  }
+  if (tab === 'review' && reviewPhotos.value.length === 0) {
+    loadReviewPhotos();
   }
 });
 </script>
@@ -120,16 +146,51 @@ watch(activeTab, (tab) => {
 
       <!-- Review tab -->
       <div v-else key="review">
-        <p class="admin-state">Review features coming soon.</p>
+        <!-- Loading -->
+        <div v-if="reviewLoading" class="admin-state">Loading…</div>
+
+        <!-- Error -->
+        <div v-else-if="reviewError" class="admin-state admin-state--error">
+          {{ reviewError }}
+        </div>
+
+        <!-- Empty -->
+        <div v-else-if="reviewPhotos.length === 0" class="admin-state">
+          No photos yet.
+        </div>
+
+        <!-- Grid -->
+        <div v-else class="review-grid">
+          <div
+            v-for="photo in reviewPhotos"
+            :key="photo.id"
+            class="review-tile"
+            @click="selectedReviewPhotoId = photo.id"
+          >
+            <img
+              :src="photo.thumbnailUrl"
+              :alt="photo.description || 'Photo'"
+              class="review-tile-img"
+            />
+            <span class="review-tile-author">{{ photo.uploaderUsername }}</span>
+          </div>
+        </div>
+
+        <!-- Photo detail modal — read-only, no editable prop -->
+        <PhotoDetailModal
+          :model-value="selectedReviewPhotoId !== null"
+          :photo-ids="selectedReviewPhotoId ? [selectedReviewPhotoId] : []"
+          @update:model-value="(val: boolean) => { if (!val) selectedReviewPhotoId = null }"
+        />
       </div>
     </Transition>
   </BaseModal>
 </template>
 
 <style scoped>
-/* Wider modal for the table */
+/* Wider modal for table and review grid */
 :deep(.modal-window) {
-  width: 680px;
+  width: 900px;
   max-width: 95vw;
 }
 
@@ -242,6 +303,49 @@ watch(activeTab, (tab) => {
 
 .admin-state--error {
   color: var(--color-danger);
+}
+
+/* Review grid */
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.review-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-glass-input-bg);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.review-tile:hover {
+  opacity: 0.85;
+}
+
+.review-tile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.review-tile-author {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* Tab fade transition */

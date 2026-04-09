@@ -8,3 +8,14 @@ export interface AdminUser {
   lastLogoutAt?: string;
 }
 
+export interface AdminPhoto {
+  id: string;
+  thumbnailUrl: string;
+  description?: string;
+  takenAt?: string;
+  address?: string;
+  uploadedAt: string;
+  uploaderUsername: string;
+  userId: string;
+}
+
