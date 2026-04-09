@@ -84,8 +84,19 @@ async function submitSignIn(): Promise<void> {
     await store.signIn({ emailOrUsername: siIdentifier.value.trim(), password: siPassword.value });
     close();
   } catch (err: unknown) {
-    if (axios.isAxiosError(err) && err.response?.status === 401) {
-      serverError.value = 'Invalid email/username or password.';
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status;
+      const code = err.response?.data?.code;
+
+      if (status === 403 && code === 'BANNED') {
+        serverError.value = '🚫 Your account has been banned due to a community guidelines violation.';
+      } else if (status === 403 && code === 'INACTIVE') {
+        serverError.value = 'Your account has been deactivated. Please contact support.';
+      } else if (status === 401) {
+        serverError.value = 'Invalid email/username or password.';
+      } else {
+        serverError.value = 'Something went wrong. Please try again.';
+      }
     } else {
       serverError.value = 'Something went wrong. Please try again.';
     }
@@ -117,8 +128,19 @@ async function submitSignUp(): Promise<void> {
     });
     close();
   } catch (err: unknown) {
-    if (axios.isAxiosError(err) && err.response?.status === 409) {
-      serverError.value = 'Email already in use.';
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status;
+      const field = err.response?.data?.field;
+
+      if (status === 409 && field === 'username') {
+        suErrors.value = { ...suErrors.value, username: 'This username is already taken.' };
+      } else if (status === 409 && field === 'email') {
+        suErrors.value = { ...suErrors.value, email: 'This email is already in use.' };
+      } else if (status === 409) {
+        serverError.value = 'An account with these details already exists.';
+      } else {
+        serverError.value = 'Something went wrong. Please try again.';
+      }
     } else {
       serverError.value = 'Something went wrong. Please try again.';
     }
@@ -194,7 +216,9 @@ async function submitSignUp(): Promise<void> {
           <span v-if="siErrors.password" class="form-error">{{ siErrors.password }}</span>
         </div>
 
-        <span v-if="serverError" class="form-error" style="display: block; margin-bottom: 12px">{{ serverError }}</span>
+        <div v-if="serverError" class="server-error-box" :class="{ 'server-error-box--ban': serverError.startsWith('🚫') }">
+          {{ serverError }}
+        </div>
 
         <button class="btn btn-primary" style="width: 100%" :disabled="isLoading" @click="submitSignIn">
           {{ isLoading ? 'Signing in…' : 'Sign In' }}
@@ -258,7 +282,9 @@ async function submitSignUp(): Promise<void> {
           <span v-if="suErrors.confirm" class="form-error">{{ suErrors.confirm }}</span>
         </div>
 
-        <span v-if="serverError" class="form-error" style="display: block; margin-bottom: 12px">{{ serverError }}</span>
+        <div v-if="serverError" class="server-error-box">
+          {{ serverError }}
+        </div>
 
         <button class="btn btn-primary" style="width: 100%" :disabled="isLoading" @click="submitSignUp">
           {{ isLoading ? 'Creating account…' : 'Create Account' }}
@@ -269,3 +295,21 @@ async function submitSignUp(): Promise<void> {
   </BaseModal>
 </template>
 
+<style scoped>
+.server-error-box {
+  display: block;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-danger);
+  background: rgba(220, 53, 69, 0.08);
+  border: 1px solid rgba(220, 53, 69, 0.25);
+}
+
+.server-error-box--ban {
+  background: rgba(220, 53, 69, 0.14);
+  border-color: rgba(220, 53, 69, 0.5);
+  font-weight: 500;
+}
+</style>
