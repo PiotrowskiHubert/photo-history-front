@@ -84,7 +84,7 @@ watch(() => props.modelValue, async (open) => {
 
 .collection-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 

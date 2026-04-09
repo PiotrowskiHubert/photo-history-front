@@ -7,6 +7,7 @@ import { useMapOverlayStore } from '@/modules/map/useMapOverlayStore';
 import { useAuthStore } from '@/modules/auth/useAuthStore';
 import AuthModal from '@/modules/auth/AuthModal.vue';
 import AccountModal from '@/modules/account/AccountModal.vue';
+import CollectionModal from '@/modules/collection/CollectionModal.vue';
 
 const props = withDefaults(
   defineProps<{
