@@ -109,5 +109,24 @@ export const usePhotoStore = defineStore('photos', () => {
     }));
   }
 
-  return { markers, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos };
+  /** Update photo description and/or takenAt */
+  async function updatePhoto(id: string, description: string | null, takenAt: string | null): Promise<void> {
+    await api.patch(`/api/photos/${id}`, { description, takenAt });
+  }
+
+  /** Replace the photo image file */
+  async function replacePhotoImage(id: string, file: File): Promise<void> {
+    const fd = new FormData();
+    fd.append('file', file);
+    await api.put(`/api/photos/${id}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  /** Delete a photo */
+  async function deletePhoto(id: string): Promise<void> {
+    await api.delete(`/api/photos/${id}`);
+  }
+
+  return { markers, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos, updatePhoto, replacePhotoImage, deletePhoto };
 });

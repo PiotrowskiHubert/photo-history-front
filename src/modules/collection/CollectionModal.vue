@@ -22,6 +22,12 @@ function closeDetail(): void {
   selectedPhotoId.value = null;
 }
 
+// Remove a photo from the local grid after deletion
+function onPhotoDeleted(id: string): void {
+  photos.value = photos.value.filter(p => p.id !== id);
+  selectedPhotoId.value = null;
+}
+
 // Fetch user photos whenever the modal opens
 watch(() => props.modelValue, async (open) => {
   if (!open) return;
@@ -74,7 +80,9 @@ watch(() => props.modelValue, async (open) => {
     <PhotoDetailModal
       :model-value="selectedPhotoId !== null"
       :photo-ids="selectedPhotoId ? [selectedPhotoId] : []"
+      :editable="true"
       @update:model-value="(val: boolean) => { if (!val) closeDetail(); }"
+      @deleted="onPhotoDeleted"
     />
   </BaseModal>
 </template>
