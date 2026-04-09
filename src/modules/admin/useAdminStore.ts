@@ -22,6 +22,7 @@ export const useAdminStore = defineStore('admin', () => {
     const { data } = await api.get('/api/admin/photos');
     return data.map((p: any): AdminPhoto => ({
       id: p.id,
+      url: API_URL + p.url,
       thumbnailUrl: API_URL + p.thumbnailUrl,
       description: p.description ?? undefined,
       takenAt: p.takenAt ?? undefined,
@@ -39,12 +40,23 @@ export const useAdminStore = defineStore('admin', () => {
     await api.post(`/api/admin/photos/${id}/review`);
   }
 
+  /** DELETE /api/admin/photos/:id/reject — reject and delete a photo */
+  async function rejectPhoto(id: string): Promise<void> {
+    await api.delete(`/api/admin/photos/${id}/reject`);
+  }
+
+  /** POST /api/admin/users/:userId/ban then DELETE photo — ban uploader + remove photo */
+  async function banUserAndDelete(userId: string, photoId: string): Promise<void> {
+    await api.post(`/api/admin/users/${userId}/ban`);
+    await api.delete(`/api/admin/photos/${photoId}/reject`);
+  }
+
   /** GET /api/admin/photos/unreviewed-count */
   async function fetchUnreviewedCount(): Promise<number> {
     const { data } = await api.get('/api/admin/photos/unreviewed-count');
     return data.count;
   }
 
-  return { fetchUsers, fetchPhotos, reviewPhoto, fetchUnreviewedCount };
+  return { fetchUsers, fetchPhotos, reviewPhoto, rejectPhoto, banUserAndDelete, fetchUnreviewedCount };
 });
 

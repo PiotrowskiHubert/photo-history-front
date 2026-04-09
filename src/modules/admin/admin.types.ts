@@ -10,6 +10,7 @@ export interface AdminUser {
 
 export interface AdminPhoto {
   id: string;
+  url: string;
   thumbnailUrl: string;
   description?: string;
   takenAt?: string;
