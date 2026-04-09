@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { useAuthStore } from '@/modules/auth/useAuthStore';
+import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 
-defineProps<{ modelValue: boolean }>();
+const props = defineProps<{ modelValue: boolean }>();
 defineEmits<{ 'update:modelValue': [value: boolean] }>();
 
 const authStore = useAuthStore();
+const photoStore = usePhotoStore();
 const username = computed(() => authStore.user?.username ?? '');
 const email = computed(() => authStore.user?.email ?? '');
+
+// Refresh map whenever this modal opens or closes
+watch(() => props.modelValue, () => {
+  photoStore.triggerMapRefresh();
+});
 </script>
 
 <template>

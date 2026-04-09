@@ -32,6 +32,8 @@ function onPhotoDeleted(id: string): void {
 
 // Fetch user photos whenever the modal opens
 watch(() => props.modelValue, async (open) => {
+  // Refresh map whenever this modal opens or closes
+  photoStore.triggerMapRefresh();
   if (!open) return;
   loading.value = true;
   error.value = null;

@@ -23,6 +23,11 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const currentIndex = ref(0);
 
+// Refresh map whenever this modal opens or closes
+watch(() => props.modelValue, () => {
+  photoStore.triggerMapRefresh();
+});
+
 // Dynamic title — "Photo" for single, "Photos (N)" for multiple
 const modalTitle = computed(() =>
   details.value.length > 1 ? `Photos (${details.value.length})` : 'Photo'

@@ -50,6 +50,8 @@ const errors = reactive<PhotoFormErrors>({
 });
 
 watch(toRef(props, 'modelValue'), async (isOpen) => {
+  // Refresh map whenever this modal opens or closes
+  photoStore.triggerMapRefresh();
   if (!isOpen) return;
   resetForm();
   const address = await reverseGeocode(props.lat, props.lng);

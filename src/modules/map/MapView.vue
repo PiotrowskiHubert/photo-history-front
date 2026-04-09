@@ -23,7 +23,7 @@ const { activeLayer } = storeToRefs(useMapLayerStore());
 const filterStore = useMapFilterStore();
 const { selectedFrom, selectedTo } = storeToRefs(filterStore);
 const photoStore = usePhotoStore();
-const { markers, photoMutatedAt } = storeToRefs(photoStore);
+const { markers, photoMutatedAt, mapRefreshToken } = storeToRefs(photoStore);
 
 const zoom = ref(13);
 const mapReady = ref(false);
@@ -68,6 +68,7 @@ function onMapReady(mapObject: any) {
   scheduleFetch();
   // Re-fetch whenever the user pans or zooms
   mapObject.on('moveend', scheduleFetch);
+  mapObject.on('zoomend', scheduleFetch);
 }
 
 onMounted(async () => {
@@ -82,6 +83,11 @@ watch([selectedFrom, selectedTo], () => {
 
 // Re-fetch markers when a photo is mutated from anywhere in the app
 watch(photoMutatedAt, () => {
+  scheduleFetch();
+});
+
+// Re-fetch markers when a modal triggers a map refresh
+watch(mapRefreshToken, () => {
   scheduleFetch();
 });
 

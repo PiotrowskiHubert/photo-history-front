@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import axios from 'axios';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { useAuthStore } from '@/modules/auth/useAuthStore';
+import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 
 type Tab = 'sign-in' | 'sign-up';
 
@@ -19,6 +20,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useAuthStore();
+const photoStore = usePhotoStore();
 const activeTab = ref<Tab>(props.initialTab);
 const isLoading = ref(false);
 const serverError = ref<string | null>(null);
@@ -27,6 +29,8 @@ const serverError = ref<string | null>(null);
 watch(
   () => props.modelValue,
   (open) => {
+    // Refresh map whenever this modal opens or closes
+    photoStore.triggerMapRefresh();
     if (open) {
       activeTab.value = props.initialTab;
       resetForms();

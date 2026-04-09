@@ -12,8 +12,15 @@ export const usePhotoStore = defineStore('photos', () => {
   // Mutation signal — watchers re-fetch data when this changes
   const photoMutatedAt = ref<number>(0);
 
+  // Map refresh signal — watchers call scheduleFetch when this changes
+  const mapRefreshToken = ref(0);
+
   function notifyMutation(): void {
     photoMutatedAt.value = Date.now();
+  }
+
+  function triggerMapRefresh(): void {
+    mapRefreshToken.value++;
   }
 
   /** Upload a photo with metadata to the backend */
@@ -76,16 +83,20 @@ export const usePhotoStore = defineStore('photos', () => {
       .map(m => new Date(m.takenAt!).getFullYear());
 
     if (years.length > 0) {
+      const minYear = Math.min(...years);
+      const maxYear = Math.max(...years);
       if (!filterStore.hasRealBounds) {
-        const minYear = Math.min(...years);
-        const maxYear = Math.max(...years);
         filterStore.setRangeBounds(minYear, maxYear);
+      } else {
+        // Expand bounds if new data falls outside current range
+        const newMin = Math.min(minYear, filterStore.rangeMin);
+        const newMax = Math.max(maxYear, filterStore.rangeMax);
+        if (newMin < filterStore.rangeMin || newMax > filterStore.rangeMax) {
+          filterStore.setRangeBounds(newMin, newMax);
+        }
       }
       filterStore.setEmpty(false);
     } else if (!filterStore.hasRealBounds) {
-      // Only mark as truly empty on the initial (unfiltered) load.
-      // When bounds are already established, 0 results just means the
-      // current year-range filter is too narrow — keep the timeline active.
       filterStore.setEmpty(true);
     }
   }
@@ -138,5 +149,5 @@ export const usePhotoStore = defineStore('photos', () => {
     notifyMutation();
   }
 
-  return { markers, photoMutatedAt, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos, updatePhoto, replacePhotoImage, deletePhoto, notifyMutation };
+  return { markers, photoMutatedAt, mapRefreshToken, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos, updatePhoto, replacePhotoImage, deletePhoto, notifyMutation, triggerMapRefresh };
 });
