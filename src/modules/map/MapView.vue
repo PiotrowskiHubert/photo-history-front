@@ -23,7 +23,7 @@ const { activeLayer } = storeToRefs(useMapLayerStore());
 const filterStore = useMapFilterStore();
 const { selectedFrom, selectedTo } = storeToRefs(filterStore);
 const photoStore = usePhotoStore();
-const { markers } = storeToRefs(photoStore);
+const { markers, photoMutatedAt } = storeToRefs(photoStore);
 
 const zoom = ref(13);
 const mapReady = ref(false);
@@ -78,6 +78,11 @@ onMounted(async () => {
 // Re-fetch markers when the user changes the year range on the timeline
 watch([selectedFrom, selectedTo], () => {
   if (filterStore.hasRealBounds) scheduleFetch();
+});
+
+// Re-fetch markers when a photo is mutated from anywhere in the app
+watch(photoMutatedAt, () => {
+  scheduleFetch();
 });
 
 const menuItems: ContextMenuItem[] = [

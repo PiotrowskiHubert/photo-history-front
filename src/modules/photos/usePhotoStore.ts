@@ -9,6 +9,13 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
 export const usePhotoStore = defineStore('photos', () => {
   const markers = ref<PhotoMarker[]>([]);
 
+  // Mutation signal — watchers re-fetch data when this changes
+  const photoMutatedAt = ref<number>(0);
+
+  function notifyMutation(): void {
+    photoMutatedAt.value = Date.now();
+  }
+
   /** Upload a photo with metadata to the backend */
   async function uploadPhoto(formData: PhotoFormData, lat: number, lng: number): Promise<void> {
     const fd = new FormData();
@@ -112,6 +119,7 @@ export const usePhotoStore = defineStore('photos', () => {
   /** Update photo description and/or takenAt */
   async function updatePhoto(id: string, description: string | null, takenAt: string | null): Promise<void> {
     await api.patch(`/api/photos/${id}`, { description, takenAt });
+    notifyMutation();
   }
 
   /** Replace the photo image file */
@@ -121,12 +129,14 @@ export const usePhotoStore = defineStore('photos', () => {
     await api.put(`/api/photos/${id}/image`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    notifyMutation();
   }
 
   /** Delete a photo */
   async function deletePhoto(id: string): Promise<void> {
     await api.delete(`/api/photos/${id}`);
+    notifyMutation();
   }
 
-  return { markers, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos, updatePhoto, replacePhotoImage, deletePhoto };
+  return { markers, photoMutatedAt, uploadPhoto, fetchPhotos, fetchPhotoDetail, fetchMyPhotos, updatePhoto, replacePhotoImage, deletePhoto, notifyMutation };
 });

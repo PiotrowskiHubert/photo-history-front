@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import PhotoDetailModal from '@/modules/photos/PhotoDetailModal.vue';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
@@ -9,6 +10,7 @@ const props = defineProps<{ modelValue: boolean }>();
 defineEmits<{ 'update:modelValue': [value: boolean] }>();
 
 const photoStore = usePhotoStore();
+const { photoMutatedAt } = storeToRefs(photoStore);
 const photos = ref<UserPhoto[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -40,6 +42,16 @@ watch(() => props.modelValue, async (open) => {
     error.value = 'Failed to load collection.';
   } finally {
     loading.value = false;
+  }
+});
+
+// Re-fetch collection grid when a photo is mutated
+watch(photoMutatedAt, async () => {
+  if (!props.modelValue) return;
+  try {
+    photos.value = await photoStore.fetchMyPhotos();
+  } catch {
+    // silent — grid already shows stale data, not critical
   }
 });
 </script>
