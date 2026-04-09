@@ -1,16 +1,59 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
+import { useAdminStore } from '@/modules/admin/useAdminStore';
+import type { AdminUser } from '@/modules/admin/admin.types';
 
 const props = defineProps<{ modelValue: boolean }>();
 defineEmits<{ 'update:modelValue': [value: boolean] }>();
 
 const photoStore = usePhotoStore();
+const adminStore = useAdminStore();
+
+const activeTab = ref<'users' | 'review'>('users');
+const users = ref<AdminUser[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+
+async function loadUsers(): Promise<void> {
+  loading.value = true;
+  error.value = null;
+  try {
+    users.value = await adminStore.fetchUsers();
+  } catch {
+    error.value = 'Failed to load users.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+function formatLastSeen(iso?: string): string {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 // Refresh map whenever this modal opens or closes
-watch(() => props.modelValue, () => {
+watch(() => props.modelValue, (open) => {
   photoStore.triggerMapRefresh();
+  if (!open) return;
+  // Fetch users on open if on users tab
+  if (activeTab.value === 'users') {
+    loadUsers();
+  }
+});
+
+// Fetch users when switching to the users tab (if not already loaded)
+watch(activeTab, (tab) => {
+  if (tab === 'users' && users.value.length === 0) {
+    loadUsers();
+  }
 });
 </script>
 
@@ -20,16 +63,195 @@ watch(() => props.modelValue, () => {
     title="Admin Panel"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <p class="admin-placeholder">Admin features coming soon.</p>
+    <!-- Tab switcher -->
+    <div class="admin-tabs">
+      <button
+        class="admin-tab"
+        :class="{ 'is-active': activeTab === 'users' }"
+        @click="activeTab = 'users'"
+      >
+        <span v-if="activeTab === 'users'" class="admin-tab-pill" />
+        <span style="position: relative; z-index: 1">Users</span>
+      </button>
+      <button
+        class="admin-tab"
+        :class="{ 'is-active': activeTab === 'review' }"
+        @click="activeTab = 'review'"
+      >
+        <span v-if="activeTab === 'review'" class="admin-tab-pill" />
+        <span style="position: relative; z-index: 1">Review</span>
+      </button>
+    </div>
+
+    <Transition name="admin-tab-fade" mode="out-in">
+      <!-- Users tab -->
+      <div v-if="activeTab === 'users'" key="users">
+        <div v-if="loading" class="admin-state">Loading…</div>
+        <div v-else-if="error" class="admin-state admin-state--error">{{ error }}</div>
+        <div v-else-if="users.length === 0" class="admin-state">No users found.</div>
+        <div v-else class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in users" :key="user.id">
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span
+                    class="admin-role-badge"
+                    :class="`admin-role-badge--${user.role.toLowerCase()}`"
+                  >
+                    {{ user.role }}
+                  </span>
+                </td>
+                <td>{{ formatLastSeen(user.lastLoginAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Review tab -->
+      <div v-else key="review">
+        <p class="admin-state">Review features coming soon.</p>
+      </div>
+    </Transition>
   </BaseModal>
 </template>
 
 <style scoped>
-.admin-placeholder {
-  font-size: 14px;
+/* Wider modal for the table */
+:deep(.modal-window) {
+  width: 680px;
+  max-width: 95vw;
+}
+
+/* Tabs — same pattern as AuthModal */
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.admin-tab {
+  position: relative;
+  padding: 7px 18px;
+  border: none;
+  background: transparent;
   color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  overflow: hidden;
+}
+
+.admin-tab.is-active {
+  color: var(--color-text-primary);
+}
+
+.admin-tab-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-island-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 0;
+}
+
+/* Table */
+.admin-table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-island-border);
+}
+
+.admin-table td {
+  padding: 10px 12px;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-island-border);
+  white-space: nowrap;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--color-glass-input-bg);
+}
+
+/* Role badge */
+.admin-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-role-badge--user {
+  background: rgba(99, 179, 237, 0.15);
+  color: #63b3ed;
+}
+
+.admin-role-badge--admin {
+  background: rgba(154, 117, 234, 0.15);
+  color: #9a75ea;
+}
+
+.admin-role-badge--system {
+  background: rgba(237, 137, 54, 0.15);
+  color: #ed8936;
+}
+
+/* State messages */
+.admin-state {
   text-align: center;
   padding: 32px 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.admin-state--error {
+  color: var(--color-danger);
+}
+
+/* Tab fade transition */
+.admin-tab-fade-enter-active,
+.admin-tab-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.admin-tab-fade-enter-from,
+.admin-tab-fade-leave-to {
+  opacity: 0;
 }
 </style>
-
