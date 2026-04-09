@@ -77,11 +77,20 @@ export const useAuthStore = defineStore('auth', () => {
     setUserFromResponse(data);
   }
 
-  /** Clear session */
-  function signOut(): void {
-    token.value = null;
-    user.value = null;
-    localStorage.removeItem(TOKEN_KEY);
+  /** Clear session — notify backend first (best-effort) */
+  async function signOut(): Promise<void> {
+    try {
+      // Record logout time on the backend (best-effort — don't block on failure)
+      if (token.value) {
+        await api.post('/api/auth/logout');
+      }
+    } catch {
+      // Ignore errors — token may already be expired
+    } finally {
+      token.value = null;
+      user.value = null;
+      localStorage.removeItem(TOKEN_KEY);
+    }
   }
 
   return { token, user, isLoggedIn, isAdmin, signIn, signUp, signOut };
