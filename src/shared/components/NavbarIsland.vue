@@ -8,6 +8,7 @@ import { useAuthStore } from '@/modules/auth/useAuthStore';
 import AuthModal from '@/modules/auth/AuthModal.vue';
 import AccountModal from '@/modules/account/AccountModal.vue';
 import CollectionModal from '@/modules/collection/CollectionModal.vue';
+import AdminModal from '@/modules/admin/AdminModal.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -34,6 +35,7 @@ const isAuthModalOpen = ref(false);
 const authInitialTab = ref<'sign-in' | 'sign-up'>('sign-in');
 const showAccountModal = ref(false);
 const showCollectionModal = ref(false);
+const showAdminModal = ref(false);
 
 function openAuth(tab: 'sign-in' | 'sign-up'): void {
   authInitialTab.value = tab;
@@ -114,6 +116,13 @@ onUnmounted(() => {
           <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="showCollectionModal = true">
             My Collection
           </button>
+          <button
+            v-if="authStore.isAdmin"
+            class="navbar-auth-btn navbar-auth-btn--ghost"
+            @click="showAdminModal = true"
+          >
+            Admin
+          </button>
           <button class="navbar-auth-btn navbar-auth-btn--ghost" @click="authStore.signOut()">
             Log Out
           </button>
@@ -125,6 +134,7 @@ onUnmounted(() => {
         />
         <AccountModal v-model="showAccountModal" />
         <CollectionModal v-model="showCollectionModal" />
+        <AdminModal v-model="showAdminModal" />
       </template>
     </nav>
   </Teleport>
