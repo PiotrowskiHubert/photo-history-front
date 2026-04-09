@@ -29,9 +29,22 @@ export const useAdminStore = defineStore('admin', () => {
       uploadedAt: p.uploadedAt,
       uploaderUsername: p.uploaderUsername,
       userId: p.userId,
+      reviewedAt: p.reviewedAt ?? undefined,
+      reviewedBy: p.reviewedBy ?? undefined,
     }));
   }
 
-  return { fetchUsers, fetchPhotos };
+  /** POST /api/admin/photos/:id/review — mark a photo as reviewed */
+  async function reviewPhoto(id: string): Promise<void> {
+    await api.post(`/api/admin/photos/${id}/review`);
+  }
+
+  /** GET /api/admin/photos/unreviewed-count */
+  async function fetchUnreviewedCount(): Promise<number> {
+    const { data } = await api.get('/api/admin/photos/unreviewed-count');
+    return data.count;
+  }
+
+  return { fetchUsers, fetchPhotos, reviewPhoto, fetchUnreviewedCount };
 });
 

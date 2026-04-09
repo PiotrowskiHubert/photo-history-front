@@ -17,5 +17,7 @@ export interface AdminPhoto {
   uploadedAt: string;
   uploaderUsername: string;
   userId: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
 }
 

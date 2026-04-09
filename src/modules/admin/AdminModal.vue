@@ -22,6 +22,8 @@ const reviewPhotos = ref<AdminPhoto[]>([]);
 const reviewLoading = ref(false);
 const reviewError = ref<string | null>(null);
 const selectedReviewPhotoId = ref<string | null>(null);
+const unreviewedCount = ref(0);
+const approvingId = ref<string | null>(null);
 
 async function loadUsers(): Promise<void> {
   loading.value = true;
@@ -47,6 +49,23 @@ async function loadReviewPhotos(): Promise<void> {
   }
 }
 
+async function approvePhoto(id: string): Promise<void> {
+  approvingId.value = id;
+  try {
+    await adminStore.reviewPhoto(id);
+    // Remove from grid immediately
+    reviewPhotos.value = reviewPhotos.value.filter(p => p.id !== id);
+    // Update badge count
+    unreviewedCount.value = Math.max(0, unreviewedCount.value - 1);
+    // Deselect
+    selectedReviewPhotoId.value = null;
+  } catch {
+    reviewError.value = 'Failed to approve photo.';
+  } finally {
+    approvingId.value = null;
+  }
+}
+
 function formatLastSeen(iso?: string): string {
   if (!iso) return 'Never';
   return new Date(iso).toLocaleString(undefined, {
@@ -59,9 +78,15 @@ function formatLastSeen(iso?: string): string {
 }
 
 // Refresh map whenever this modal opens or closes
-watch(() => props.modelValue, (open) => {
+watch(() => props.modelValue, async (open) => {
   photoStore.triggerMapRefresh();
   if (!open) return;
+  // Fetch unreviewed count for badge
+  try {
+    unreviewedCount.value = await adminStore.fetchUnreviewedCount();
+  } catch {
+    // Silent — badge just won't update
+  }
   // Fetch users on open if on users tab
   if (activeTab.value === 'users') {
     loadUsers();
@@ -105,7 +130,10 @@ watch(activeTab, (tab) => {
         @click="activeTab = 'review'"
       >
         <span v-if="activeTab === 'review'" class="admin-tab-pill" />
-        <span style="position: relative; z-index: 1">Review</span>
+        <span style="position: relative; z-index: 1">
+          Review
+          <span v-if="unreviewedCount > 0" class="review-badge">{{ unreviewedCount }}</span>
+        </span>
       </button>
     </div>
 
@@ -174,6 +202,25 @@ watch(activeTab, (tab) => {
             />
             <span class="review-tile-author">{{ photo.uploaderUsername }}</span>
           </div>
+        </div>
+
+        <!-- Approve bar — shown when a photo tile is selected -->
+        <div v-if="selectedReviewPhotoId" class="review-approve-bar">
+          <span class="review-approve-label">
+            Photo by
+            <strong>{{ reviewPhotos.find(p => p.id === selectedReviewPhotoId)?.uploaderUsername }}</strong>
+          </span>
+          <button
+            class="btn btn-primary btn-sm"
+            :disabled="approvingId === selectedReviewPhotoId"
+            @click="approvePhoto(selectedReviewPhotoId!)"
+          >
+            <FontAwesomeIcon icon="check" />
+            {{ approvingId === selectedReviewPhotoId ? 'Approving…' : 'Approve' }}
+          </button>
+          <button class="btn btn-secondary btn-sm" @click="selectedReviewPhotoId = null">
+            Deselect
+          </button>
         </div>
 
         <!-- Photo detail modal — read-only, no editable prop -->
@@ -346,6 +393,41 @@ watch(activeTab, (tab) => {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+}
+
+/* Review badge on tab */
+.review-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 9px;
+  background: #e53935;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* Approve bar */
+.review-approve-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-input-bg);
+  border: 1px solid var(--color-island-border);
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.review-approve-label {
+  flex: 1;
 }
 
 /* Tab fade transition */
