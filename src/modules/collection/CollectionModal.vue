@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import PhotoDetailModal from '@/modules/photos/PhotoDetailModal.vue';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 import type { UserPhoto } from '@/modules/photos/photo.types';
 
@@ -11,6 +12,15 @@ const photoStore = usePhotoStore();
 const photos = ref<UserPhoto[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
+const selectedPhotoId = ref<string | null>(null);
+
+function openDetail(id: string): void {
+  selectedPhotoId.value = id;
+}
+
+function closeDetail(): void {
+  selectedPhotoId.value = null;
+}
 
 // Fetch user photos whenever the modal opens
 watch(() => props.modelValue, async (open) => {
@@ -51,6 +61,7 @@ watch(() => props.modelValue, async (open) => {
         v-for="photo in photos"
         :key="photo.id"
         class="collection-tile"
+        @click="openDetail(photo.id)"
       >
         <img
           :src="photo.thumbnailUrl"
@@ -59,6 +70,12 @@ watch(() => props.modelValue, async (open) => {
         />
       </div>
     </div>
+    <!-- Photo detail overlay -->
+    <PhotoDetailModal
+      :model-value="selectedPhotoId !== null"
+      :photo-ids="selectedPhotoId ? [selectedPhotoId] : []"
+      @update:model-value="(val: boolean) => { if (!val) closeDetail(); }"
+    />
   </BaseModal>
 </template>
 
