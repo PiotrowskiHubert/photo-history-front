@@ -111,6 +111,7 @@ export const usePhotoStore = defineStore('photos', () => {
       takenAt: data.takenAt,
       address: data.address,
       uploaderUsername: data.uploaderUsername,
+      userId: data.userId,
     };
   }
 

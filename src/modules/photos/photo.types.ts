@@ -27,6 +27,7 @@ export interface PhotoDetail {
   takenAt?: string;
   address?: string;
   uploaderUsername: string;
+  userId: string;
 }
 
 export interface BoundingBox {

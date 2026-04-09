@@ -2,6 +2,7 @@
 import { ref, watch, computed, nextTick } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
+import { useAuthStore } from '@/modules/auth/useAuthStore';
 import type { PhotoDetail } from '@/modules/photos/photo.types';
 
 const props = withDefaults(
@@ -18,10 +19,19 @@ const emit = defineEmits<{
 }>();
 
 const photoStore = usePhotoStore();
+const authStore = useAuthStore();
 const details = ref<PhotoDetail[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const currentIndex = ref(0);
+
+// Editable if explicitly passed OR if the current photo belongs to the logged-in user
+const canEdit = computed(() => {
+  if (props.editable) return true;
+  const detail = details.value[currentIndex.value];
+  if (!detail || !authStore.user) return false;
+  return detail.userId === authStore.user.id;
+});
 
 // Refresh map whenever this modal opens or closes
 watch(() => props.modelValue, () => {
@@ -227,7 +237,7 @@ async function confirmDelete(): Promise<void> {
         </span>
         <!-- Replace image button (overlay, bottom-right) -->
         <button
-          v-if="editable && !isEditing"
+          v-if="canEdit && !isEditing"
           class="photo-replace-btn"
           :disabled="isReplacingImage"
           @click="triggerImageReplace"
@@ -277,7 +287,7 @@ async function confirmDelete(): Promise<void> {
       <p v-if="saveError" class="photo-detail-error" style="padding: 0">{{ saveError }}</p>
 
       <!-- Action buttons (editable mode only) -->
-      <div v-if="editable" class="photo-edit-actions">
+      <div v-if="canEdit" class="photo-edit-actions">
         <template v-if="!isEditing">
           <button class="btn btn-secondary btn-sm" @click="startEditing">
             <FontAwesomeIcon icon="pen" /> Edit
