@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch, toRef } from 'vue';
 import { storeToRefs } from 'pinia';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import TagInput from '@/shared/components/TagInput.vue';
 import { useAddressAutocomplete } from './useAddressAutocomplete';
 import { useReverseGeocode } from './useReverseGeocode';
 import { useThemeStore } from '@/modules/theme/useThemeStore';
@@ -42,6 +43,7 @@ const form = reactive<PhotoFormData>({
   description: props.initialData?.description ?? '',
   date: props.initialData?.date ?? null,
   file: props.initialData?.file ?? null,
+  tags: props.initialData?.tags ?? [],
 });
 
 const errors = reactive<PhotoFormErrors>({
@@ -110,6 +112,7 @@ function resetForm() {
   form.description = '';
   form.date = null;
   form.file = null;
+  form.tags = [];
   query.value = '';
   selectedAddress.value = '';
   suggestions.value = [];
@@ -160,6 +163,12 @@ function resetForm() {
         class="form-input form-textarea"
         placeholder="Add description..."
       />
+    </div>
+
+    <!-- Tags -->
+    <div class="form-field">
+      <label class="form-label">Tags</label>
+      <TagInput v-model="form.tags" />
     </div>
 
     <!-- Date -->

@@ -3,6 +3,7 @@ export interface PhotoFormData {
   description: string;
   date: Date | null;
   file: File | null;
+  tags: string[];
 }
 
 export interface PhotoFormErrors {
@@ -28,6 +29,7 @@ export interface PhotoDetail {
   address?: string;
   uploaderUsername: string;
   userId: string;
+  tags: string[];
 }
 
 export interface BoundingBox {
@@ -45,5 +47,6 @@ export interface UserPhoto {
   takenAt?: string;
   address?: string;
   uploadedAt: string;
+  tags: string[];
 }
 

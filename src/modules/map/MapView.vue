@@ -8,6 +8,7 @@ import { useGeolocation } from './useGeolocation';
 import { useContextMenu } from './useContextMenu';
 import { useMapLayerStore } from './useMapLayerStore';
 import { useMapFilterStore } from './useMapFilterStore';
+import { useTagFilterStore } from './useTagFilterStore';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 import type { PhotoMarker, BoundingBox } from '@/modules/photos/photo.types';
 import PhotoMarkerCluster from '@/modules/map/PhotoMarkerCluster.vue';
@@ -21,6 +22,7 @@ const contextMenu = useContextMenu();
 const { open } = contextMenu;
 const { activeLayer } = storeToRefs(useMapLayerStore());
 const filterStore = useMapFilterStore();
+const tagFilterStore = useTagFilterStore();
 const { selectedFrom, selectedTo } = storeToRefs(filterStore);
 const photoStore = usePhotoStore();
 const { markers, photoMutatedAt, mapRefreshToken } = storeToRefs(photoStore);
@@ -55,7 +57,8 @@ function scheduleFetch() {
     const bounds = getBounds();
     if (!bounds) return;
     try {
-      await photoStore.fetchPhotos(bounds);
+      const tagFilter = tagFilterStore.activeTags.length > 0 ? tagFilterStore.activeTags : undefined;
+      await photoStore.fetchPhotos(bounds, tagFilter);
     } catch (err) {
       console.error('[MapView] fetchPhotos failed:', err);
     }

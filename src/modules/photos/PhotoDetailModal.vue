@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import TagInput from '@/shared/components/TagInput.vue';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 import { useAuthStore } from '@/modules/auth/useAuthStore';
 import type { PhotoDetail } from '@/modules/photos/photo.types';
@@ -99,6 +100,7 @@ function toDateInputValue(iso?: string): string {
 const isEditing = ref(false);
 const editDescription = ref('');
 const editTakenAt = ref('');
+const editTags = ref<string[]>([]);
 const isSaving = ref(false);
 const saveError = ref<string | null>(null);
 const imageFileInput = ref<HTMLInputElement | null>(null);
@@ -110,6 +112,7 @@ function resetEditState(): void {
   isEditing.value = false;
   editDescription.value = '';
   editTakenAt.value = '';
+  editTags.value = [];
   isSaving.value = false;
   saveError.value = null;
   isReplacingImage.value = false;
@@ -121,6 +124,7 @@ function startEditing(): void {
   if (!currentDetail.value) return;
   editDescription.value = currentDetail.value.description ?? '';
   editTakenAt.value = toDateInputValue(currentDetail.value.takenAt);
+  editTags.value = [...(currentDetail.value.tags ?? [])];
   saveError.value = null;
   isEditing.value = true;
 }
@@ -137,10 +141,11 @@ async function saveChanges(): Promise<void> {
   try {
     const desc = editDescription.value.trim() || null;
     const taken = editTakenAt.value || null;
-    await photoStore.updatePhoto(currentDetail.value.id, desc, taken);
+    await photoStore.updatePhoto(currentDetail.value.id, desc, taken, editTags.value);
     // Update local state so the UI reflects changes immediately
     currentDetail.value.description = desc ?? undefined;
     currentDetail.value.takenAt = taken ?? undefined;
+    currentDetail.value.tags = [...editTags.value];
     isEditing.value = false;
   } catch {
     saveError.value = 'Failed to save changes.';
@@ -260,6 +265,9 @@ async function confirmDelete(): Promise<void> {
         <p v-if="currentDetail.description" class="photo-detail-desc">{{ currentDetail.description }}</p>
         <p v-if="currentDetail.address" class="photo-detail-address">{{ currentDetail.address }}</p>
         <p class="photo-detail-author">by {{ currentDetail.uploaderUsername }}</p>
+        <div v-if="currentDetail.tags && currentDetail.tags.length" class="photo-detail-tags">
+          <span v-for="(tag, idx) in currentDetail.tags" :key="idx" class="photo-detail-tag-chip">{{ tag }}</span>
+        </div>
       </div>
 
       <!-- Edit form (shown when editing) -->
@@ -280,6 +288,10 @@ async function confirmDelete(): Promise<void> {
             type="date"
             class="form-input"
           />
+        </div>
+        <div class="photo-edit-field">
+          <label class="photo-edit-label">Tags</label>
+          <TagInput v-model="editTags" />
         </div>
       </div>
 
@@ -425,6 +437,25 @@ async function confirmDelete(): Promise<void> {
   font-size: 12px;
   color: var(--color-text-tertiary);
   font-style: italic;
+}
+
+.photo-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.photo-detail-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-input-bg);
+  border: 1px solid var(--color-island-border);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 /* ── Edit mode ── */

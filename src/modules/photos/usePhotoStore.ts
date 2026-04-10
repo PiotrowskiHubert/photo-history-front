@@ -32,6 +32,7 @@ export const usePhotoStore = defineStore('photos', () => {
     if (formData.description) fd.append('description', formData.description);
     if (formData.address) fd.append('address', formData.address);
     if (formData.date) fd.append('takenAt', formData.date.toISOString());
+    if (formData.tags && formData.tags.length > 0) fd.append('tags', formData.tags.join(','));
 
     const { data } = await api.post('/api/photos/upload', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -50,7 +51,7 @@ export const usePhotoStore = defineStore('photos', () => {
   }
 
   /** Fetch photos — optionally filtered by map bounding box and year range */
-  async function fetchPhotos(bounds?: BoundingBox): Promise<void> {
+  async function fetchPhotos(bounds?: BoundingBox, tagFilter?: string[]): Promise<void> {
     const filterStore = useMapFilterStore();
 
     const params: Record<string, string> = {};
@@ -66,6 +67,10 @@ export const usePhotoStore = defineStore('photos', () => {
       params.maxLat = bounds.maxLat.toFixed(6);
       params.minLng = bounds.minLng.toFixed(6);
       params.maxLng = bounds.maxLng.toFixed(6);
+    }
+
+    if (tagFilter && tagFilter.length > 0) {
+      params.tags = tagFilter.join(',');
     }
 
     const { data } = await api.get('/api/photos', { params });
@@ -112,6 +117,7 @@ export const usePhotoStore = defineStore('photos', () => {
       address: data.address,
       uploaderUsername: data.uploaderUsername,
       userId: data.userId,
+      tags: data.tags ?? [],
     };
   }
 
@@ -125,12 +131,17 @@ export const usePhotoStore = defineStore('photos', () => {
       takenAt: p.takenAt,
       address: p.address,
       uploadedAt: p.uploadedAt,
+      tags: p.tags ?? [],
     }));
   }
 
-  /** Update photo description and/or takenAt */
-  async function updatePhoto(id: string, description: string | null, takenAt: string | null): Promise<void> {
-    await api.patch(`/api/photos/${id}`, { description, takenAt });
+  /** Update photo description, takenAt, and/or tags */
+  async function updatePhoto(id: string, description: string | null, takenAt: string | null, tags: string[] | null = null): Promise<void> {
+    const body: Record<string, any> = { description, takenAt };
+    if (tags !== null) {
+      body.tags = tags.join(',');
+    }
+    await api.patch(`/api/photos/${id}`, body);
     notifyMutation();
   }
 
