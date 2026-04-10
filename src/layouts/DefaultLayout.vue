@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NavbarIsland from '@/shared/components/NavbarIsland.vue';
+import TagSearchIsland from '@/shared/components/TagSearchIsland.vue';
 import TimelineIsland from '@/modules/map/TimelineIsland.vue';
 import type { NavItem, NavOverlayItem } from '@/shared/types/navbar.types';
 import { useThemeStore } from '@/modules/theme/useThemeStore';
@@ -26,6 +27,7 @@ const overlayItems: NavOverlayItem[] = [
 
 <template>
   <NavbarIsland :items="navItems" :overlays="overlayItems" initial-active-id="dark" />
+  <TagSearchIsland />
   <TimelineIsland v-if="isTimelineEnabled" />
   <main class="w-full h-screen overflow-hidden">
     <slot />

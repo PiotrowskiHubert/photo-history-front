@@ -5,8 +5,6 @@ import { useNavbarPill } from '@/shared/composables/useNavbarPill';
 import { useMapLayerStore } from '@/modules/map/useMapLayerStore';
 import { useMapOverlayStore } from '@/modules/map/useMapOverlayStore';
 import { useAuthStore } from '@/modules/auth/useAuthStore';
-import { useTagFilterStore } from '@/modules/map/useTagFilterStore';
-import { usePhotoStore } from '@/modules/photos/usePhotoStore';
 import AuthModal from '@/modules/auth/AuthModal.vue';
 import AccountModal from '@/modules/account/AccountModal.vue';
 import CollectionModal from '@/modules/collection/CollectionModal.vue';
@@ -39,35 +37,6 @@ const showAccountModal = ref(false);
 const showCollectionModal = ref(false);
 const showAdminModal = ref(false);
 
-const tagFilterStore = useTagFilterStore();
-const photoStore = usePhotoStore();
-const tagSearchQuery = ref('');
-
-function submitTagSearch(): void {
-  const raw = tagSearchQuery.value;
-  const parsed = raw
-    .split(/[\s,]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  if (parsed.length > 0) {
-    tagFilterStore.setTags(parsed);
-  } else {
-    tagFilterStore.clearTags();
-  }
-  photoStore.triggerMapRefresh();
-}
-
-function removeFilterTag(index: number): void {
-  const updated = [...tagFilterStore.activeTags];
-  updated.splice(index, 1);
-  if (updated.length > 0) {
-    tagFilterStore.setTags(updated);
-  } else {
-    tagFilterStore.clearTags();
-  }
-  tagSearchQuery.value = updated.join(' ');
-  photoStore.triggerMapRefresh();
-}
 
 function openAuth(tab: 'sign-in' | 'sign-up'): void {
   authInitialTab.value = tab;
@@ -125,28 +94,6 @@ onUnmounted(() => {
         <FontAwesomeIcon :icon="overlay.icon" />
         {{ overlay.label }}
       </button>
-
-      <!-- Tag search section -->
-      <div class="navbar-divider" />
-      <div class="navbar-tag-search">
-        <div class="navbar-tag-input-wrapper">
-          <input
-            v-model="tagSearchQuery"
-            class="navbar-tag-input"
-            placeholder="Search by tags…"
-            @keydown.enter="submitTagSearch"
-          />
-          <button class="navbar-tag-search-btn" @click="submitTagSearch" aria-label="Search tags">
-            <FontAwesomeIcon icon="magnifying-glass" />
-          </button>
-        </div>
-        <div v-if="tagFilterStore.activeTags.length" class="navbar-tag-chips">
-          <span v-for="(tag, idx) in tagFilterStore.activeTags" :key="idx" class="navbar-tag-chip">
-            <span class="navbar-tag-chip-text">{{ tag }}</span>
-            <button class="navbar-tag-chip-remove" type="button" @click="removeFilterTag(idx)">&times;</button>
-          </span>
-        </div>
-      </div>
 
       <!-- Auth section -->
       <template v-if="showAuth">
