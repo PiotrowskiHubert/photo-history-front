@@ -11,6 +11,7 @@ export interface MapOverlay {
 export const useMapOverlayStore = defineStore('mapOverlay', () => {
   const overlays = ref<MapOverlay[]>([
     { id: 'overlay-a', label: 'Timeline', icon: 'timeline', active: true },
+    { id: 'overlay-tags', label: 'Tags', icon: 'tag', active: false },
     { id: 'overlay-b', label: 'Overlay B', icon: 'map-pin', active: true },
     { id: 'overlay-c', label: 'Overlay C', icon: 'compass', active: true },
   ]);
@@ -25,6 +26,10 @@ export const useMapOverlayStore = defineStore('mapOverlay', () => {
     return a?.active ?? true
   })
 
+  const isTagSearchEnabled = computed(() => {
+    return overlays.value.find(o => o.id === 'overlay-tags')?.active ?? false
+  })
+
   function toggleOverlay(id: string): void {
     const overlay = overlays.value.find((o) => o.id === id);
     if (overlay) {
@@ -32,6 +37,6 @@ export const useMapOverlayStore = defineStore('mapOverlay', () => {
     }
   }
 
-  return { overlays, allOverlays, activeOverlayIds, isTimelineEnabled, toggleOverlay };
+  return { overlays, allOverlays, activeOverlayIds, isTimelineEnabled, isTagSearchEnabled, toggleOverlay };
 });
 

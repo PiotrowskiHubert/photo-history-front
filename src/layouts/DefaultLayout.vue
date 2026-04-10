@@ -10,7 +10,7 @@ import { storeToRefs } from 'pinia';
 const themeStore = useThemeStore();
 themeStore.syncWithLayer('dark');
 
-const { isTimelineEnabled } = storeToRefs(useMapOverlayStore());
+const { isTimelineEnabled, isTagSearchEnabled } = storeToRefs(useMapOverlayStore());
 
 const navItems: NavItem[] = [
   { id: 'classic',   label: 'Classic',   icon: 'map',       layerId: 'classic' },
@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
 
 const overlayItems: NavOverlayItem[] = [
   { id: 'overlay-a', label: 'Timeline', icon: '' },
+  { id: 'overlay-tags', label: 'Tags', icon: 'tag' },
   // { id: 'overlay-b', label: 'Overlay B', icon: 'map-pin' },
   // { id: 'overlay-c', label: 'Overlay C', icon: 'compass' },
 ];
@@ -27,7 +28,7 @@ const overlayItems: NavOverlayItem[] = [
 
 <template>
   <NavbarIsland :items="navItems" :overlays="overlayItems" initial-active-id="dark" />
-  <TagSearchIsland />
+  <TagSearchIsland v-if="isTagSearchEnabled" />
   <TimelineIsland v-if="isTimelineEnabled" />
   <main class="w-full h-screen overflow-hidden">
     <slot />

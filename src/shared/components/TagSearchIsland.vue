@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useTagFilterStore } from '@/modules/map/useTagFilterStore';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
+import { useMapOverlayStore } from '@/modules/map/useMapOverlayStore';
 
 const tagFilterStore = useTagFilterStore();
 const photoStore = usePhotoStore();
+const { isTagSearchEnabled } = storeToRefs(useMapOverlayStore());
 const tagSearchQuery = ref('');
+
+watch(isTagSearchEnabled, (enabled) => {
+  if (!enabled) {
+    tagFilterStore.clearTags();
+    tagSearchQuery.value = '';
+    photoStore.triggerMapRefresh();
+  }
+});
 
 function submitTagSearch(): void {
   const raw = tagSearchQuery.value;
