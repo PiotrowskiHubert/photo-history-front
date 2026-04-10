@@ -105,6 +105,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
 
 function onMapContextMenu(event: LeafletMouseEvent) {
   event.originalEvent.preventDefault();
+  if (menuItems.value.length === 0) return;
   open(event.originalEvent.clientX, event.originalEvent.clientY, event.latlng.lat, event.latlng.lng);
 }
 </script>
