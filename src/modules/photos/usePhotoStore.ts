@@ -132,6 +132,7 @@ export const usePhotoStore = defineStore('photos', () => {
       address: p.address,
       uploadedAt: p.uploadedAt,
       tags: p.tags ?? [],
+      reviewedAt: p.reviewedAt ?? undefined,
     }));
   }
 

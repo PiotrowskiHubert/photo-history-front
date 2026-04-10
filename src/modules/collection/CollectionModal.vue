@@ -88,6 +88,12 @@ watch(photoMutatedAt, async () => {
           :alt="photo.description || 'Photo'"
           class="collection-tile-img"
         />
+        <span
+          class="collection-tile-badge"
+          :class="photo.reviewedAt ? 'badge-approved' : 'badge-pending'"
+        >
+          {{ photo.reviewedAt ? '✓ Approved' : '⏳ Pending' }}
+        </span>
       </div>
     </div>
     <!-- Photo detail overlay -->
@@ -128,6 +134,7 @@ watch(photoMutatedAt, async () => {
 }
 
 .collection-tile {
+  position: relative;
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -145,5 +152,28 @@ watch(photoMutatedAt, async () => {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.collection-tile-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.badge-approved {
+  background: rgba(52, 199, 89, 0.75);
+  color: #fff;
+}
+
+.badge-pending {
+  background: rgba(255, 179, 0, 0.75);
+  color: #fff;
 }
 </style>

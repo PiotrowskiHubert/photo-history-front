@@ -48,5 +48,6 @@ export interface UserPhoto {
   address?: string;
   uploadedAt: string;
   tags: string[];
+  reviewedAt?: string;
 }
 

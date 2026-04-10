@@ -28,6 +28,7 @@ const currentIndex = ref(0);
 
 // Editable if explicitly passed OR if the current photo belongs to the logged-in user
 const canEdit = computed(() => {
+  if (!authStore.isLoggedIn) return false;
   if (props.editable) return true;
   const detail = details.value[currentIndex.value];
   if (!detail || !authStore.user) return false;

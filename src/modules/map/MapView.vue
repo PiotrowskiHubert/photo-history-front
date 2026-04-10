@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, provide, ref, watch } from 'vue';
+import { computed, onMounted, provide, ref, watch } from 'vue';
 import { LMap, LTileLayer } from '@vue-leaflet/vue-leaflet';
 import type { LeafletMouseEvent } from 'leaflet';
 import type L from 'leaflet';
@@ -10,6 +10,7 @@ import { useMapLayerStore } from './useMapLayerStore';
 import { useMapFilterStore } from './useMapFilterStore';
 import { useTagFilterStore } from './useTagFilterStore';
 import { usePhotoStore } from '@/modules/photos/usePhotoStore';
+import { useAuthStore } from '@/modules/auth/useAuthStore';
 import type { PhotoMarker, BoundingBox } from '@/modules/photos/photo.types';
 import PhotoMarkerCluster from '@/modules/map/PhotoMarkerCluster.vue';
 import PhotoDetailModal from '@/modules/photos/PhotoDetailModal.vue';
@@ -25,6 +26,7 @@ const filterStore = useMapFilterStore();
 const tagFilterStore = useTagFilterStore();
 const { selectedFrom, selectedTo } = storeToRefs(filterStore);
 const photoStore = usePhotoStore();
+const authStore = useAuthStore();
 const { markers, photoMutatedAt, mapRefreshToken } = storeToRefs(photoStore);
 
 const zoom = ref(13);
@@ -94,11 +96,12 @@ watch(mapRefreshToken, () => {
   scheduleFetch();
 });
 
-const menuItems: ContextMenuItem[] = [
-  { label: 'Add Photo', icon: 'camera', action: () => { showAddPhotoModal.value = true; contextMenu.close(); } },
-  { label: 'Action 2', icon: 'pen', action: () => console.log('action2'), separator: true },
-  { label: 'Action 3', icon: 'trash', action: () => console.log('action3'), danger: true, separator: true },
-];
+const menuItems = computed<ContextMenuItem[]>(() => {
+  if (!authStore.isLoggedIn) return [];
+  return [
+    { label: 'Add Photo', icon: 'camera', action: () => { showAddPhotoModal.value = true; contextMenu.close(); } },
+  ];
+});
 
 function onMapContextMenu(event: LeafletMouseEvent) {
   event.originalEvent.preventDefault();
@@ -131,7 +134,7 @@ function onMapContextMenu(event: LeafletMouseEvent) {
         @cluster-click="(group: PhotoMarker[]) => { showPhotoModal = group.map(m => m.id) }"
       />
     </l-map>
-    <ContextMenu :items="menuItems" />
+    <ContextMenu v-if="menuItems.length > 0" :items="menuItems" />
     <PhotoDetailModal
       :model-value="showPhotoModal.length > 0"
       :photo-ids="showPhotoModal"
